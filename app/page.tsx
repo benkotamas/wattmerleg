@@ -1,6 +1,7 @@
 "use client";
 
 import { AppShell } from "@/components/app-shell";
+import { ConfidenceExplanation } from "@/components/confidence-explanation";
 import { formatDate, formatHuf, formatKwh } from "@/components/format";
 import { PageState } from "@/components/page-state";
 import { annualForecast, comparePeriodsAtSameElapsedTime, periodSummary } from "@/lib/calculations";
@@ -49,4 +50,4 @@ export default function DashboardPage() {
 }
 
 function ForecastValue({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 break-words font-black tabular-nums">{value}</p></div>; }
-function Confidence({ value }: { value: ForecastConfidence }) { const labels = { high: "Magas", medium: "Közepes", low: "Alacsony" }; const colors = { high: "bg-emerald-100 text-emerald-800", medium: "bg-blue-100 text-blue-800", low: "bg-amber-100 text-amber-800" }; return <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${colors[value]}`}>{labels[value]} megbízhatóság</span>; }
+function Confidence({ value }: { value: ForecastConfidence }) { return <ConfidenceExplanation level={value} context="forecast" compact/>; }
