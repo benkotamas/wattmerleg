@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Gauge, History, PlusCircle, Settings } from "lucide-react";
+import { BarChart3, Flame, Gauge, History, PlusCircle, Settings } from "lucide-react";
 
 const links = [
+  { href: "/futes", label: "Fűtés", icon: Flame },
   { href: "/", label: "Áttekintés", icon: Gauge },
   { href: "/uj-meres", label: "Új mérés", icon: PlusCircle },
   { href: "/elozmenyek", label: "Előzmények", icon: History },

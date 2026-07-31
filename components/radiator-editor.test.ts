@@ -1,0 +1,2 @@
+import {describe,expect,it} from "vitest";import {KNOWN_RADIATORS,radiatorSeedRows} from "./radiator-editor";
+describe("radiator seed",()=>{it("csak üres profilba tölt és idempotens",()=>{expect(radiatorSeedRows("u",[])).toHaveLength(KNOWN_RADIATORS.length);expect(radiatorSeedRows("u",[{id:"1",room_name:"x",quantity:1}])).toEqual([])});it("nem seedeli Attila tervezett Silver cseréjét",()=>expect(KNOWN_RADIATORS.find(x=>x.room_name==="Attila szobája")?.radiator_type).toBe("Régi alumínium harmonikás"))});

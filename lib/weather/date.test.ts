@@ -1,0 +1,2 @@
+import { describe,expect,it } from "vitest"; import { localIsoDate, weatherRequestKind } from "./date";
+describe("localIsoDate",()=>{it("budapesti napot ad UTC éjfél körül",()=>expect(localIsoDate(new Date("2026-01-01T23:30:00Z"),"Europe/Budapest")).toBe("2026-01-02"));it("a weather ág a budapesti mai naphoz viszonyít",()=>{const now=new Date("2026-01-01T23:30:00Z");expect(weatherRequestKind("2026-01-01",now,"Europe/Budapest")).toBe("historical");expect(weatherRequestKind("2026-01-02",now,"Europe/Budapest")).toBe("forecast")})});
