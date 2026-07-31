@@ -1,7 +1,7 @@
 import type { MeterReading } from "./types";
 import { readingDelta } from "./calculations";
 
-export interface MonthlyStat { month: string; label: string; consumption: number; production: number; balance: number; estimated: boolean; }
+export interface MonthlyStat { month: string; label: string; shortLabel: string; consumption: number; production: number; balance: number; estimated: boolean; }
 
 export function monthlyStatistics(readings: MeterReading[]): MonthlyStat[] {
   const result = new Map<string, MonthlyStat>();
@@ -18,7 +18,8 @@ export function monthlyStatistics(readings: MeterReading[]): MonthlyStat[] {
       const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
       const stat = result.get(key) ?? {
         month: key,
-        label: new Intl.DateTimeFormat("hu-HU", { year: "2-digit", month: "short" }).format(cursor),
+        label: new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(cursor),
+        shortLabel: new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(cursor),
         consumption: 0, production: 0, balance: 0, estimated: false,
       };
       const ratio = segmentDays / delta.elapsedDays;

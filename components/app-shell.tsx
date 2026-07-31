@@ -31,7 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-2xl justify-around border-t border-slate-200 bg-white/95 px-1 pb-[max(.45rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {links.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className={`flex min-w-0 flex-1 flex-col items-center gap-1 text-[10px] font-bold ${pathname === href ? "text-emerald-700" : "text-slate-500"}`}>
-            <Icon size={21}/><span className="truncate">{label}</span>
+            <span className={href === "/uj-meres" ? "-mt-5 grid size-11 place-items-center rounded-full bg-emerald-700 text-white shadow-lg ring-4 ring-white" : "grid size-6 place-items-center"}><Icon size={href === "/uj-meres" ? 24 : 21}/></span><span className="truncate">{label}</span>
           </Link>
         ))}
       </nav>

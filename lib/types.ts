@@ -41,3 +41,29 @@ export interface PeriodSummary {
   projectedAnnualConsumption: number;
   projectedAnnualProduction: number;
 }
+
+export interface TariffSettings {
+  discounted_limit_kwh: number;
+  discounted_price_ft: number;
+  market_price_ft: number;
+  feed_in_price_ft: number;
+  annual_closing_month: number;
+  annual_closing_day: number;
+}
+
+export interface AnnualForecast extends PeriodSummary {
+  referenceDate: Date;
+  closingDate: Date;
+  remainingDays: number;
+  totalPeriodDays: number;
+  progressPercent: number;
+  projectedBalance: number;
+  projectedAmount: number;
+}
+
+export interface PeriodComparison {
+  consumptionPercent: number | null;
+  productionPercent: number | null;
+  balancePercent: number | null;
+  comparedDays: number;
+}

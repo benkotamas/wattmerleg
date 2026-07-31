@@ -5,10 +5,12 @@ Mobil-first Next.js alkalmazás az otthoni áramfogyasztás és napelemes vissza
 ## Funkciók
 
 - aktuális elszámolási időszak fogyasztása, termelése, egyenlege és becsült díja;
-- napi átlagok és éves előrejelzés;
+- napi átlagok, előző időszaki összehasonlítás és éves előrejelzés;
 - mobilos mérőállás-rögzítés, növekvő óraállás- és dátumellenőrzéssel;
 - mérési előzmények szerkesztése és törlése;
-- időarányosan becsült havi statisztika és grafikon;
+- választható nézetű, időarányosan becsült havi statisztika és grafikon;
+- hónap szerint szűrhető mérési előzmények;
+- adatbázisból szerkeszthető tarifák, biztonsági alapértékekkel;
 - manuális, tranzakciós éves zárás, az utolsó mérés továbbvitelével;
 - egyszer futtatható, hibatűrő Excel-import;
 - Supabase email/jelszó belépés és sor-szintű adatvédelem (RLS).
@@ -40,7 +42,7 @@ A `SUPABASE_SERVICE_ROLE_KEY` kizárólag az importhoz kell. Ezt ne tedd `NEXT_P
 
 ## 3. Adatbázis-migráció
 
-A Supabase Dashboard **SQL Editor** felületén sorrendben futtasd le a `supabase/migrations` mappában lévő migrációkat. Az első létrehozza a táblákat, indexeket, RLS-szabályokat és az éves zárás függvényét; a második az újrafuttatható Excel-importhoz szükséges egyedi kulcsot adja hozzá.
+A Supabase Dashboard **SQL Editor** felületén sorrendben futtasd le a `supabase/migrations` mappában lévő migrációkat. Production frissítésnél csak a még nem alkalmazott új migrációt futtasd. A `003_tariff_settings.sql` létrehozza az RLS-sel védett tarifatáblát, és a meglévő felhasználók számára beírja az eddigi alapértékeket. A `001` és `002` migrációt ne futtasd újra.
 
 Alternatívaként, telepített Supabase CLI-val:
 
@@ -83,8 +85,6 @@ Adatbázis-módosítás nélküli ellenőrzés:
 npm run import:excel -- --dry-run
 ```
 
-Megjegyzés: a projekt létrehozásakor a specifikációban említett Excel-fájl nem volt jelen a munkatérben, ezért valódi alapadat-import nem futott le.
-
 ## 6. Ellenőrzések
 
 ```bash
@@ -94,7 +94,7 @@ npm test
 npm run build
 ```
 
-Az energiaárak és az éves limit egy helyen, a `lib/config.ts` fájlban találhatók.
+Az energiaárak, az éves limit és a zárási nap a `tariff_settings` táblában módosíthatók a Beállítások oldalról. A `lib/config.ts` csak adatbázis-hiba vagy még le nem futtatott migráció esetére tartalmaz biztonsági alapértékeket.
 
 ## 7. Vercel telepítés
 
