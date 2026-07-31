@@ -1,5 +1,5 @@
 import type{HistoricalConfidence,RetrospectiveSample}from"./historical-calibration";
-export const HISTORICAL_ANALYSIS_CACHE_VERSION=1;
+export const HISTORICAL_ANALYSIS_CACHE_VERSION=2;
 export interface AnalysisSnapshot{version:number;userId:string;fingerprint:string;generatedAt:string;baseline:{value:number|null;sampleCount:number;confidence:HistoricalConfidence};samples:RetrospectiveSample[];buckets:{bucket:string;sampleCount:number;medianGridImportKwhDay:number;medianHeatingExcessKwhDay:number}[]}
 const memory=new Map<string,AnalysisSnapshot>();const DB="wattmerleg-analysis",STORE="snapshots";
 export function snapshotMemoryGet(userId:string){return memory.get(userId)??null}export function snapshotMemorySet(snapshot:AnalysisSnapshot){memory.set(snapshot.userId,snapshot)}export function clearSnapshotMemory(){memory.clear()}

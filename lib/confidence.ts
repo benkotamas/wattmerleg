@@ -20,6 +20,7 @@ export const confidencePresentation = (level: ConfidenceLevel) => presentations[
 export function retrospectiveConfidenceReasons(input: {
   durationDays: number;
   weatherDayCount: number;
+  weatherCoverageRatio?: number;
   baselineSampleCount: number;
   dataWarning?: string | null;
   productionDeltaKwh?: number | null;
@@ -28,7 +29,9 @@ export function retrospectiveConfidenceReasons(input: {
   const reasons = [
     `${input.baselineSampleCount} historikus intervallum szolgált az alapterhelés becsléséhez.`,
     `A mérési intervallum hossza ${input.durationDays.toLocaleString("hu-HU", { maximumFractionDigits: 1 })} nap.`,
-    `Az időjárási lefedettség ${input.weatherDayCount} nap.`,
+    ...(input.weatherCoverageRatio == null
+      ? [`Érintett helyi napok: ${input.weatherDayCount}.`]
+      : [`Időjárási lefedettség: ${(input.weatherCoverageRatio * 100).toFixed(0)}%.`, `Érintett helyi napok: ${input.weatherDayCount}.`]),
   ];
   if (input.dataWarning) reasons.push(`Adatminőségi figyelmeztetés: ${input.dataWarning}`);
   if (input.productionDeltaKwh != null && input.productionDeltaKwh > input.observedGridImportKwh) {
