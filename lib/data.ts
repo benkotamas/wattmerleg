@@ -20,7 +20,7 @@ export function useEnergyData() {
       const [periodResult, readingResult, tariffResult] = await Promise.all([
         supabase.from("settlement_periods").select("*").order("start_date", { ascending: true }),
         supabase.from("meter_readings").select("*").order("reading_at", { ascending: true }),
-        supabase.from("tariff_settings").select("discounted_limit_kwh,discounted_price_ft,market_price_ft,feed_in_price_ft,annual_closing_month,annual_closing_day").maybeSingle(),
+        supabase.from("tariff_settings").select("discounted_limit_kwh,discounted_price_ft,market_price_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day").maybeSingle(),
       ]);
       if (periodResult.error) throw periodResult.error;
       if (readingResult.error) throw readingResult.error;
@@ -34,6 +34,10 @@ export function useEnergyData() {
           feed_in_price_ft: Number(tariffResult.data.feed_in_price_ft),
           annual_closing_month: tariffResult.data.annual_closing_month,
           annual_closing_day: tariffResult.data.annual_closing_day,
+          heating_season_start_month: tariffResult.data.heating_season_start_month,
+          heating_season_start_day: tariffResult.data.heating_season_start_day,
+          heating_season_end_month: tariffResult.data.heating_season_end_month,
+          heating_season_end_day: tariffResult.data.heating_season_end_day,
         });
         setTariffFromDatabase(true);
       } else {

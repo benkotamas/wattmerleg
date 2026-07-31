@@ -25,6 +25,8 @@ const period = (id: string, start: string, status: "open" | "closed" = "open"): 
 const customTariff: TariffSettings = {
   discounted_limit_kwh: 10, discounted_price_ft: 1, market_price_ft: 2,
   feed_in_price_ft: 3, annual_closing_month: 8, annual_closing_day: 4,
+  heating_season_start_month: 10, heating_season_start_day: 1,
+  heating_season_end_month: 4, heating_season_end_day: 30,
 };
 
 describe("energy calculations", () => {

@@ -1,7 +1,18 @@
 import type { MeterReading } from "./types";
 import { readingDelta } from "./calculations";
 
-export interface MonthlyStat { month: string; label: string; shortLabel: string; consumption: number; production: number; balance: number; estimated: boolean; }
+export interface MonthlyStat {
+  month: string;
+  label: string;
+  shortLabel: string;
+  consumption: number;
+  production: number;
+  balance: number;
+  estimated: boolean;
+  hasDataWarning: boolean;
+  ignoredConsumptionIntervals: number;
+  ignoredProductionIntervals: number;
+}
 
 export function monthlyStatistics(readings: MeterReading[]): MonthlyStat[] {
   const result = new Map<string, MonthlyStat>();
@@ -21,10 +32,13 @@ export function monthlyStatistics(readings: MeterReading[]): MonthlyStat[] {
         label: new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "long" }).format(cursor),
         shortLabel: new Intl.DateTimeFormat("hu-HU", { year: "numeric", month: "short" }).format(cursor),
         consumption: 0, production: 0, balance: 0, estimated: false,
+        hasDataWarning: false, ignoredConsumptionIntervals: 0, ignoredProductionIntervals: 0,
       };
       const ratio = segmentDays / delta.elapsedDays;
-      stat.consumption += delta.consumption * ratio;
-      stat.production += delta.production * ratio;
+      if (delta.consumption >= 0) stat.consumption += delta.consumption * ratio;
+      else { stat.hasDataWarning = true; stat.ignoredConsumptionIntervals += 1; }
+      if (delta.production >= 0) stat.production += delta.production * ratio;
+      else { stat.hasDataWarning = true; stat.ignoredProductionIntervals += 1; }
       stat.balance = stat.consumption - stat.production;
       stat.estimated ||= cursor.getMonth() !== end.getMonth();
       result.set(key, stat);

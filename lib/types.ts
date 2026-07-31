@@ -49,6 +49,10 @@ export interface TariffSettings {
   feed_in_price_ft: number;
   annual_closing_month: number;
   annual_closing_day: number;
+  heating_season_start_month: number;
+  heating_season_start_day: number;
+  heating_season_end_month: number;
+  heating_season_end_day: number;
 }
 
 export interface AnnualForecast extends PeriodSummary {

@@ -11,6 +11,9 @@ Mobil-first Next.js alkalmazás az otthoni áramfogyasztás és napelemes vissza
 - választható nézetű, időarányosan becsült havi statisztika és grafikon;
 - hónap szerint szűrhető mérési előzmények;
 - adatbázisból szerkeszthető tarifák, biztonsági alapértékekkel;
+- korábbi évek havi mintáira épülő szezonális fogyasztási és termelési előrejelzés;
+- konfigurálható fűtési szezon és többéves fűtésifogyasztás-összehasonlítás;
+- az éves elszámolási időszaktól független, teljes következő fűtési szezon forecast;
 - manuális, tranzakciós éves zárás, az utolsó mérés továbbvitelével;
 - egyszer futtatható, hibatűrő Excel-import;
 - Supabase email/jelszó belépés és sor-szintű adatvédelem (RLS).
@@ -42,7 +45,7 @@ A `SUPABASE_SERVICE_ROLE_KEY` kizárólag az importhoz kell. Ezt ne tedd `NEXT_P
 
 ## 3. Adatbázis-migráció
 
-A Supabase Dashboard **SQL Editor** felületén sorrendben futtasd le a `supabase/migrations` mappában lévő migrációkat. Production frissítésnél csak a még nem alkalmazott új migrációt futtasd. A `003_tariff_settings.sql` létrehozza az RLS-sel védett tarifatáblát, és a meglévő felhasználók számára beírja az eddigi alapértékeket. A `001` és `002` migrációt ne futtasd újra.
+A Supabase Dashboard **SQL Editor** felületén sorrendben futtasd le a `supabase/migrations` mappában lévő migrációkat. Productionben a `004_heating_season_forecast.sql` már létrehozta a négy fűtésiszezon-mezőt. Frissítéskor csak az új `005_heating_season_validation.sql` migrációt futtasd: ez adatváltoztatás nélkül, idempotens módon hozzáadja és validálja a szigorú hónap/nap CHECK-korlátokat. A `001`–`004` migrációkat ne futtasd újra.
 
 Alternatívaként, telepített Supabase CLI-val:
 
@@ -94,7 +97,11 @@ npm test
 npm run build
 ```
 
-Az energiaárak, az éves limit és a zárási nap a `tariff_settings` táblában módosíthatók a Beállítások oldalról. A `lib/config.ts` csak adatbázis-hiba vagy még le nem futtatott migráció esetére tartalmaz biztonsági alapértékeket.
+Az energiaárak, az éves limit, a zárási nap és a fűtési szezon határai a `tariff_settings` táblában módosíthatók a Beállítások oldalról. A `lib/config.ts` csak adatbázis-hiba vagy még le nem futtatott migráció esetére tartalmaz biztonsági alapértékeket. A forecast eredmények dinamikusan készülnek, nem kerülnek adatbázisba.
+
+A fűtési szezon szélső hónapjai naparányosan számítódnak. Február 29 érvényes évfüggetlen beállítás; nem szökőévben a számítás február 28-ra clampeli. A következő fűtési szezon forecastja nem áll meg az aktuális éves elszámolás zárásánál.
+
+Negatív mérődeltát a havi statisztika mérőnként külön kihagy és megjelöl. A normál statisztikai UI megtartja az adott hónap többi érvényes részét, de a szezonális forecast tanítómintájából az érintett mérő teljes év–hónap mintája kimarad. A fogyasztás és termelés külön mintaszámmal és confidence-szel rendelkezik.
 
 ## 7. Vercel telepítés
 

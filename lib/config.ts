@@ -14,4 +14,8 @@ export const DEFAULT_TARIFF_SETTINGS = {
   feed_in_price_ft: ENERGY_CONFIG.exportPriceHufPerKwh,
   annual_closing_month: ENERGY_CONFIG.annualClosingMonth,
   annual_closing_day: ENERGY_CONFIG.annualClosingDay,
+  heating_season_start_month: 10,
+  heating_season_start_day: 1,
+  heating_season_end_month: 4,
+  heating_season_end_day: 30,
 };
