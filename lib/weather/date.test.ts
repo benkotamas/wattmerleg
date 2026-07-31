@@ -1,2 +1,4 @@
-import { describe,expect,it } from "vitest"; import { localIsoDate, weatherRequestKind } from "./date";
+import { describe,expect,it } from "vitest"; import { localDayWindow, localIsoDate, weatherRequestKind } from "./date";
 describe("localIsoDate",()=>{it("budapesti napot ad UTC éjfél körül",()=>expect(localIsoDate(new Date("2026-01-01T23:30:00Z"),"Europe/Budapest")).toBe("2026-01-02"));it("a weather ág a budapesti mai naphoz viszonyít",()=>{const now=new Date("2026-01-01T23:30:00Z");expect(weatherRequestKind("2026-01-01",now,"Europe/Budapest")).toBe("historical");expect(weatherRequestKind("2026-01-02",now,"Europe/Budapest")).toBe("forecast")})});
+it("a budapesti téli és nyári nap helyi éjfélből indul",()=>{expect(new Date(localDayWindow("2026-01-10","Europe/Budapest").start).toISOString()).toBe("2026-01-09T23:00:00.000Z");expect(new Date(localDayWindow("2026-07-10","Europe/Budapest").start).toISOString()).toBe("2026-07-09T22:00:00.000Z")});
+it("DST nap hossza nem hardcode-olt 24 óra",()=>{expect(localDayWindow("2026-03-29","Europe/Budapest").durationHours).toBe(23);expect(localDayWindow("2026-10-25","Europe/Budapest").durationHours).toBe(25)});

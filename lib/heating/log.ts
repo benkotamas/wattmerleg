@@ -1,6 +1,7 @@
 import type { ComfortResult, HeatingLog } from "./types";
 
 export const temperatureSourceAfterManualEdit = (): "manual" => "manual";
+export function heatingLogGuard(outdoorC:number,targetC:number,comfort:string,summerOverride=false):string|null{if(!comfort)return"Válassz komforteredményt.";if(outdoorC>=targetC&&!summerOverride)return"Ehhez a naphoz nem várható fűtési igény.";return null}
 
 export function buildHeatingLog(input: {
   userId: string; date: string; outdoorC: number; outdoorMinC?:number|null; outdoorMaxC?:number|null; source: "weather_api" | "manual";

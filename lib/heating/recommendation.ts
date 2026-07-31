@@ -34,6 +34,7 @@ export function similarHeatingLogs(logs: HeatingLog[], outdoorC: number, targetC
 
 export function heatingRecommendation(profile: HeatingProfile, source: HeatSource, logs: HeatingLog[], outdoorC: number): HeatingRecommendation {
   const target = profile.target_indoor_temperature_c;
+  if (finite(outdoorC) && outdoorC >= target) return {estimatedHeatDemandKw:0,recommendedFlowTemperatureC:null,recommendedBoilerPowerKw:null,confidence:"high",similarLogCount:0,reason:`Nincs fűtési igény: a külső napi átlag eléri vagy meghaladja a ${target} °C-os beltéri célt.`,capacityWarning:null,referenceLog:null,noHeatingDemand:true};
   const demand = estimatedBuildingHeatDemand(profile.design_heat_loss_kw, profile.design_indoor_temperature_c, profile.design_outdoor_temperature_c, target, outdoorC);
   if (!finite(outdoorC) || outdoorC < -50 || outdoorC > 50 || source.heat_source_type !== "electric_boiler" || source.nominal_power_kw <= 0) return { estimatedHeatDemandKw: null, recommendedFlowTemperatureC: null, recommendedBoilerPowerKw: null, confidence: "low", similarLogCount: 0, reason: "Hiányos vagy érvénytelen adatok miatt nem adható biztonságos ajánlás.", capacityWarning: null };
   // A korábbi, magasabb korláttal készült log történeti adat marad, de nem

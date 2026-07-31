@@ -25,6 +25,7 @@ describe("heating optimization",()=>{
  it("44/5 too cold nem tiltja a 44/7 comfortable párt",()=>expect(heatingRecommendation(profile,source,[log({flow_temperature_c:44,boiler_max_power_kw:5,comfort_result:"too_cold"}),log({flow_temperature_c:44,boiler_max_power_kw:7})],4).recommendedFlowTemperatureC).toBe(44));
  it("kapacitásfigyelmeztetést ad configured max felett",()=>expect(heatingRecommendation({...profile,design_heat_loss_kw:30},source,[],0).capacityWarning).not.toBeNull());
  it("configured max fölötti régi successful logot nem clampel referenciává",()=>{const result=heatingRecommendation(profile,source,[log({flow_temperature_c:42,boiler_max_power_kw:10})],4);expect(result.recommendedFlowTemperatureC).toBeNull();expect(result.referenceLog).toBeNull();expect(result.recommendedBoilerPowerKw).not.toBe(10)});
+ it("outdoor >= target esetén nincs fűtési igény",()=>{const result=heatingRecommendation(profile,source,[],21);expect(result.noHeatingDemand).toBe(true);expect(result.estimatedHeatDemandKw).toBe(0)});
  it("PA02 csak 1–6",()=>{expect(isValidBoschPa02(1)).toBe(true);expect(isValidBoschPa02(6)).toBe(true);expect(isValidBoschPa02(7)).toBe(false)});
  it("PA03 csak 0–4",()=>{expect(isValidBoschPa03(0)).toBe(true);expect(isValidBoschPa03(4)).toBe(true);expect(isValidBoschPa03(5)).toBe(false)});
 });
