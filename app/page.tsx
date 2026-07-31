@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { ConfidenceExplanation } from "@/components/confidence-explanation";
 import { formatDate, formatHuf, formatKwh } from "@/components/format";
 import { PageState } from "@/components/page-state";
+import { KpiCard, PageHeader, StatusPanel } from "@/components/ui";
+import Link from "next/link";
 import { annualForecast, comparePeriodsAtSameElapsedTime, periodSummary } from "@/lib/calculations";
 import { useEnergyData } from "@/lib/data";
 import { seasonalAnnualForecast, type ForecastConfidence } from "@/lib/seasonal-forecast";
@@ -30,8 +32,8 @@ export default function DashboardPage() {
   ];
   return (
     <AppShell>
-      <section className="mb-5"><p className="text-sm font-bold text-emerald-700">AKTUÁLIS IDŐSZAK</p><h1 className="mt-1 text-3xl font-black tracking-tight">Energia áttekintés</h1><p className="mt-1 text-sm text-slate-500">{formatDate(period.start_date)} óta · a legutóbbi mérésig {Math.round(forecast.elapsedDays)} nap</p></section>
-      <section className="grid gap-3 sm:grid-cols-2">{cards.map(({ label, value, note, icon: Icon, color }) => <article key={label} className="card min-w-0 p-5"><div className="flex items-start justify-between gap-3"><p className="text-sm font-bold text-slate-500">{label}</p><span className={`shrink-0 rounded-xl p-2 ${color}`}><Icon size={20}/></span></div><p className="mt-4 break-words text-3xl font-black tracking-tight tabular-nums">{value}</p><p className="mt-2 text-xs leading-relaxed text-slate-500">{note}</p></article>)}</section>
+      <PageHeader eyebrow="Aktuális időszak" title="Energia áttekintés" description={`${formatDate(period.start_date)} óta · a legutóbbi mérésig ${Math.round(forecast.elapsedDays)} nap`} actions={<><Link href="/uj-meres" className="primary">Új mérés</Link><Link href="/statisztika" className="secondary">Statisztika</Link></>}/>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ label, value, note, icon: Icon },index) => <KpiCard key={label} label={label} value={value} note={note} accent={(["orange","green","blue","neutral"] as const)[index]} icon={<Icon size={20}/>}/>)}</section>
       <section className="card mt-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold text-emerald-700">BECSLÉS</p><h2 className="text-xl font-black">Éves előrejelzés</h2></div><p className="text-xs text-slate-500">Legutóbbi mérés: {formatDate(forecast.referenceDate)}</p></div>
         <div className="mt-4"><div className="mb-2 flex justify-between text-xs font-bold"><span>{forecast.progressPercent.toLocaleString("hu-HU", { maximumFractionDigits: 1 })}% eltelt</span><span>{Math.ceil(forecast.remainingDays)} nap van hátra</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${forecast.progressPercent}%` }}/></div></div>
@@ -43,7 +45,7 @@ export default function DashboardPage() {
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4"><ForecastValue label="Szezonális termelés" value={seasonal.productionReliable ? formatKwh(seasonal.production) : `${formatKwh(seasonal.production)}*`}/><ForecastValue label="Szezonális energiamérleg" value={formatKwh(seasonal.balance)}/><ForecastValue label="Becsült összeg" value={formatHuf(seasonal.estimatedAmount)}/><ForecastValue label="Historikus évek" value={`${seasonal.historicalYears} év`}/></div>
         {!seasonal.productionReliable && <p className="mt-3 text-xs text-amber-800">* A termelési becslés egyes hónapokban kevés historikus adat miatt bizonytalan.</p>}
         <details className="mt-5 rounded-2xl border border-slate-200 bg-white p-4"><summary className="cursor-pointer font-black">Havi szezonális előrejelzés</summary><div className="mt-3 space-y-2">{seasonal.months.map(month => <div key={month.month} className="rounded-xl bg-slate-50 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold capitalize">{month.label}</p><Confidence value={month.confidence}/></div><div className="mt-2 grid grid-cols-2 gap-2 text-xs"><span>Fogyasztás</span><b className="text-right">{formatKwh((month.actualConsumption ?? 0) + (month.expectedConsumption ?? 0))} · {month.expectedConsumption === null ? "tényleges" : month.actualConsumption ? "tényleges + becsült" : "becsült"}</b><span>Termelés</span><b className="text-right">{formatKwh((month.actualProduction ?? 0) + (month.expectedProduction ?? 0))}{!month.productionReliable ? " · bizonytalan" : ""}</b><span>Energiamérleg</span><b className="text-right">{formatKwh(month.expectedBalance)}</b></div></div>)}</div></details>
-        <p className="mt-5 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">Az előrejelzés a legutóbbi tényleges mérésig kialakult napi átlagot vetíti ki a következő zárásig. Tájékoztató becslés, nem számlaadat.</p>
+        <StatusPanel tone="warning" className="mt-5">Az előrejelzés a legutóbbi tényleges mérésig kialakult napi átlagot vetíti ki a következő zárásig. Tájékoztató becslés, nem számlaadat.</StatusPanel>
       </section>
     </AppShell>
   );

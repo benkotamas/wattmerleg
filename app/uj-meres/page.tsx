@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { PageState } from "@/components/page-state";
+import { PageHeader, StatusPanel } from "@/components/ui";
 import { formatKwh } from "@/components/format";
 import { readingDelta } from "@/lib/calculations";
 import { useEnergyData } from "@/lib/data";
@@ -51,8 +52,8 @@ export default function NewReadingPage() {
   if (loading || error) return <AppShell><PageState loading={loading} error={error}/></AppShell>;
   return (
     <AppShell>
-      <h1 className="text-3xl font-black">Új mérőállás</h1><p className="mt-1 text-sm text-slate-500">Add meg a két mérő aktuális értékét.</p>
-      {latest && <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">Előző: fogyasztás {formatKwh(latest.consumption_meter_kwh)}, termelés {formatKwh(latest.production_meter_kwh)}</p>}
+      <PageHeader eyebrow="Adatrögzítés" title="Új mérőállás" description="Add meg a két mérő aktuális értékét. Mentés előtt ellenőrizheted a változást."/>
+      {latest && <StatusPanel tone="success">Előző mérés: fogyasztás <b>{formatKwh(latest.consumption_meter_kwh)}</b>, termelés <b>{formatKwh(latest.production_meter_kwh)}</b></StatusPanel>}
       <form onSubmit={submit} className="card mt-4 space-y-4 p-5">
         <label className="block text-sm font-bold">Dátum és idő<input required type="datetime-local" className="field mt-2" value={readingAt} onChange={e => setReadingAt(e.target.value)}/></label>
         <div className="grid gap-4 sm:grid-cols-2">
