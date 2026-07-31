@@ -4,9 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ConfidenceExplanation } from "@/components/confidence-explanation";
 import { actualHeatingConfidenceReasons, noHeatingDemandConfidence } from "@/lib/confidence";
+import { useEnergyData } from "@/lib/data";
 import { useHeatingData } from "@/lib/heating/data";
 import { loadAnalysisSnapshot } from "@/lib/heating/analysis-snapshot";
-import { bucketAnalysis } from "@/lib/heating/period-analysis";
+import { heatingCharacteristic } from "@/lib/heating/period-analysis";
 import { optimizationTrial, trialSucceeded } from "@/lib/heating/optimization-plan";
 import { buildHeatingLog, heatingLogGuard } from "@/lib/heating/log";
 import { heatingRecommendation, validateHeatingLog } from "@/lib/heating/recommendation";
@@ -17,6 +18,7 @@ import { localIsoDate } from "@/lib/weather/date";
 
 export default function HeatingPage() {
   const { profile, source, thermostat, logs, loading, error, refresh } = useHeatingData();
+  const energy=useEnergyData();
   const [logDate, setLogDate] = useState(localIsoDate(new Date()));
   const [outdoor, setOutdoor] = useState<number | null>(null);
   const [outdoorRange, setOutdoorRange] = useState<{minC:number;maxC:number}|null>(null);
@@ -34,7 +36,7 @@ export default function HeatingPage() {
     fetch(url,{signal:controller.signal}).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error); const daily = body.daily?.[0]; if (!daily) throw new Error("Nincs adat a kiválasztott naphoz."); setOutdoor(daily.meanC); setOutdoorRange({minC:daily.minC,maxC:daily.maxC}); setTemperatureSource("weather_api"); setWeatherNote(body.kind === "historical" ? "Historikus Open-Meteo adat" : "Open-Meteo előrejelzés"); }).catch(caught => { if(caught instanceof DOMException&&caught.name==="AbortError")return;setOutdoor(null);setOutdoorRange(null);setTemperatureSource("manual");setWeatherNote(caught instanceof Error ? caught.message : "Az időjárás nem érhető el."); });return()=>controller.abort();
   }, [profile, logDate]);
   const recommendation = useMemo(() => profile && source && outdoor != null ? heatingRecommendation(profile, source, logs, outdoor) : null, [profile, source, logs, outdoor]);
-  const loadContext=useMemo(()=>outdoor==null?null:bucketAnalysis(historicalSamples,logs).find(row=>{if(outdoor>10)return row.bucket==="> 10 °C";if(outdoor>5)return row.bucket==="5–10 °C";if(outdoor>0)return row.bucket==="0–5 °C";if(outdoor>-5)return row.bucket==="−5–0 °C";return row.bucket==="< −5 °C"})??null,[historicalSamples,logs,outdoor]);
+  const loadContext=useMemo(()=>outdoor==null||!profile?null:heatingCharacteristic(historicalSamples,energy.tariff,profile.target_indoor_temperature_c,profile.weather_timezone,logs).find(row=>{if(outdoor>10)return row.bucket==="> 10 °C";if(outdoor>5)return row.bucket==="5–10 °C";if(outdoor>0)return row.bucket==="0–5 °C";if(outdoor>-5)return row.bucket==="−5–0 °C";return row.bucket==="< −5 °C"})??null,[historicalSamples,logs,outdoor,profile,energy.tariff]);
   const trial=useMemo(()=>profile&&source&&recommendation&&outdoor!=null&&!recommendation.noHeatingDemand?optimizationTrial(profile,source,logs,recommendation,loadContext,outdoor):null,[profile,source,logs,recommendation,loadContext,outdoor]);
 
   async function addLog(event: FormEvent<HTMLFormElement>) {
