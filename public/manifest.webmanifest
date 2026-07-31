@@ -1,0 +1,17 @@
+{
+  "name": "Wattmérleg",
+  "short_name": "Wattmérleg",
+  "description": "Áramfogyasztás és visszatáplálás követése",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#137a42",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
