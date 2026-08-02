@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "import:excel": "tsx scripts/import-excel.ts"
+    "import:excel": "tsx scripts/import-excel.ts",
+    "growatt:discover": "tsx scripts/growatt-discover.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

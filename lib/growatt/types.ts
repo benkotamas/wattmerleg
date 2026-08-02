@@ -1,0 +1,14 @@
+export type GrowattConnectionStatus={configured:boolean;connected:boolean;checkedAt:string;plantCount?:number;deviceCount?:number;message?:string};
+export type GrowattPlantSummary={id:string;name:string|null;timezone:string|null;status:string|null};
+export type GrowattDeviceSummary={id:string;serialNumber:string;type:string|null;model:string|null;status:string|null;plantId:string|null};
+export type GrowattLatestEnergy={plantId:string|null;deviceId:string|null;deviceSerialNumber:string|null;measuredAt:string|null;currentPowerW:number|null;todayEnergyKwh:number|null;monthEnergyKwh:number|null;yearEnergyKwh:number|null;lifetimeEnergyKwh:number|null;gridImportPowerW:number|null;gridExportPowerW:number|null;loadPowerW:number|null;batteryChargePowerW:number|null;batteryDischargePowerW:number|null;batterySocPercent:number|null;source:"growatt";rawCapabilities:string[]};
+export type GrowattHttpMethod="GET"|"POST";
+export type GrowattPlantFieldMap={plantList:string;plant:{id:string;name?:string;timezone?:string;status?:string}};
+export type GrowattDeviceFieldMap={deviceList:string;device:{id:string;serialNumber:string;type?:string;model?:string;status?:string;plantId?:string}};
+export type GrowattLatestFieldMap={latest:{measuredAt?:string;currentPowerW?:string;todayEnergyKwh?:string;monthEnergyKwh?:string;yearEnergyKwh?:string;lifetimeEnergyKwh?:string;gridImportPowerW?:string;gridExportPowerW?:string;loadPowerW?:string;batteryChargePowerW?:string;batteryDischargePowerW?:string;batterySocPercent?:string}};
+export type GrowattFieldMap=GrowattPlantFieldMap&Partial<GrowattDeviceFieldMap>&Partial<GrowattLatestFieldMap>;
+export type GrowattBaseConfig={baseUrl:string;authHeader:string;authValueTemplate:string};
+export type GrowattPlantConfig=GrowattBaseConfig&{plantsPath:string;plantsMethod:GrowattHttpMethod;plantMap:GrowattPlantFieldMap};
+export type GrowattDeviceConfig={devicesPath:string;devicesMethod:GrowattHttpMethod;deviceMap:GrowattDeviceFieldMap};
+export type GrowattLatestConfig={latestPath:string;latestMethod:GrowattHttpMethod;latestMap:GrowattLatestFieldMap};
+export type GrowattEndpointConfig=GrowattPlantConfig&GrowattDeviceConfig&GrowattLatestConfig;
