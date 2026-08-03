@@ -15,5 +15,6 @@ A megosztott ZIP-ből ki kell hagyni:
 - `node_modules`
 - `.env`
 - `.env.local`
+- `.vercel`
 - `*.tsbuildinfo`
 - `*.zip`

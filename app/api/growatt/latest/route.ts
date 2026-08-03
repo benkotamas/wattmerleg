@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { growattRouteAccess } from "@/lib/growatt/auth";
 import { growattErrorResponse } from "@/lib/growatt/route";
-import { cached, defaultGrowattLatestProvider, latestEnergy } from "@/lib/growatt/service";
+import { cached, defaultGrowattLatestProvider, latestEnergy, publicGrowattLatest } from "@/lib/growatt/service";
 
 export const runtime = "nodejs";
 const noStore = { "Cache-Control": "no-store" };
@@ -13,6 +13,7 @@ export async function GET() {
   if (access === "not_configured") return NextResponse.json({ error: { code: "GROWATT_NOT_CONFIGURED", message: "A Growatt tulajdonosa nincs konfigurálva." } }, { status: 503, headers: noStore });
   try {
     const { provider, fingerprint } = defaultGrowattLatestProvider();
-    return NextResponse.json(await cached(`growatt:latest:${fingerprint}`, 120_000, () => latestEnergy(provider)), { headers: { "Cache-Control": "private, max-age=120" } });
+    const latest = await cached(`growatt:latest:${fingerprint}`, 120_000, () => latestEnergy(provider));
+    return NextResponse.json(publicGrowattLatest(latest), { headers: { "Cache-Control": "private, max-age=120" } });
   } catch (error) { return growattErrorResponse(error); }
 }

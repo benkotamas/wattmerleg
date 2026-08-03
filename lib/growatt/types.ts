@@ -3,6 +3,7 @@ export type GrowattPlantSummary={id:string;name:string|null;timezone:string|null
 export type GrowattDeviceSummary={id:string;serialNumber:string;type:string|null;model:string|null;status:string|null;plantId:string|null};
 export type GrowattLatestEnergy={plantId:string|null;deviceId:string|null;deviceSerialNumber:string|null;measuredAt:string|null;currentPowerW:number|null;todayEnergyKwh:number|null;monthEnergyKwh:number|null;yearEnergyKwh:number|null;lifetimeEnergyKwh:number|null;gridImportPowerW:number|null;gridExportPowerW:number|null;loadPowerW:number|null;batteryChargePowerW:number|null;batteryDischargePowerW:number|null;batterySocPercent:number|null;source:"growatt";rawCapabilities:string[]};
 export type GrowattHttpMethod="GET"|"POST";
+export type GrowattDeviceTypeId=1|2|3|4|5|6|7|8|9|10;
 export type GrowattPlantFieldMap={plantList:string;plant:{id:string;name?:string;timezone?:string;status?:string}};
 export type GrowattDeviceFieldMap={deviceList:string;device:{id:string;serialNumber:string;type?:string;model?:string;status?:string;plantId?:string}};
 export type GrowattLatestFieldMap={latest:{measuredAt?:string;currentPowerW?:string;todayEnergyKwh?:string;monthEnergyKwh?:string;yearEnergyKwh?:string;lifetimeEnergyKwh?:string;gridImportPowerW?:string;gridExportPowerW?:string;loadPowerW?:string;batteryChargePowerW?:string;batteryDischargePowerW?:string;batterySocPercent?:string}};

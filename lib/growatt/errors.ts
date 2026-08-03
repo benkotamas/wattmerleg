@@ -1,5 +1,23 @@
-export type GrowattErrorCode="GROWATT_NOT_CONFIGURED"|"GROWATT_AUTH_FAILED"|"GROWATT_RATE_LIMITED"|"GROWATT_TIMEOUT"|"GROWATT_UNAVAILABLE"|"GROWATT_INVALID_RESPONSE"|"GROWATT_NO_PLANT"|"GROWATT_NO_DEVICE"|"GROWATT_UNSUPPORTED_DEVICE";
-const safeMessages:Record<GrowattErrorCode,string>={GROWATT_NOT_CONFIGURED:"A Growatt integráció nincs teljesen konfigurálva.",GROWATT_AUTH_FAILED:"A Growatt hitelesítés sikertelen.",GROWATT_RATE_LIMITED:"A Growatt API túl sok kérést kapott.",GROWATT_TIMEOUT:"A Growatt API nem válaszolt időben.",GROWATT_UNAVAILABLE:"A Growatt szolgáltatás átmenetileg nem érhető el.",GROWATT_INVALID_RESPONSE:"A Growatt API válasza nem értelmezhető biztonságosan.",GROWATT_NO_PLANT:"A Growatt fiókban nem található erőmű.",GROWATT_NO_DEVICE:"A kiválasztott erőműben nem található eszköz.",GROWATT_UNSUPPORTED_DEVICE:"A Growatt fiókban nem választható egyértelműen támogatott erőmű vagy eszköz."};
-export class GrowattError extends Error{constructor(public readonly code:GrowattErrorCode,public readonly status:number,options?:{cause?:unknown}){super(safeMessages[code],options);this.name="GrowattError"}}
-export const growattHttpStatus=(code:GrowattErrorCode)=>code==="GROWATT_NOT_CONFIGURED"?503:code==="GROWATT_AUTH_FAILED"?401:code==="GROWATT_RATE_LIMITED"?429:code==="GROWATT_NO_PLANT"||code==="GROWATT_NO_DEVICE"?404:code==="GROWATT_UNSUPPORTED_DEVICE"?409:code==="GROWATT_INVALID_RESPONSE"?502:503;
-export function asGrowattError(error:unknown){return error instanceof GrowattError?error:new GrowattError("GROWATT_UNAVAILABLE",503,{cause:error})}
+export type GrowattErrorCode = "GROWATT_NOT_CONFIGURED" | "GROWATT_AUTH_FAILED" | "GROWATT_PERMISSION_DENIED" | "GROWATT_RATE_LIMITED" | "GROWATT_TIMEOUT" | "GROWATT_UNAVAILABLE" | "GROWATT_INVALID_RESPONSE" | "GROWATT_NO_PLANT" | "GROWATT_NO_DEVICE" | "GROWATT_UNSUPPORTED_DEVICE";
+
+const safeMessages: Record<GrowattErrorCode, string> = {
+  GROWATT_NOT_CONFIGURED: "A Growatt integráció nincs teljesen konfigurálva.",
+  GROWATT_AUTH_FAILED: "A Growatt hitelesítés sikertelen.",
+  GROWATT_PERMISSION_DENIED: "A Growatt tokennek nincs jogosultsága ehhez a read-only API művelethez.",
+  GROWATT_RATE_LIMITED: "A Growatt API túl sok kérést kapott.",
+  GROWATT_TIMEOUT: "A Growatt API nem válaszolt időben.",
+  GROWATT_UNAVAILABLE: "A Growatt szolgáltatás átmenetileg nem érhető el.",
+  GROWATT_INVALID_RESPONSE: "A Growatt API válasza nem értelmezhető biztonságosan.",
+  GROWATT_NO_PLANT: "A Growatt fiókban nem található erőmű.",
+  GROWATT_NO_DEVICE: "A kiválasztott erőműben nem található eszköz.",
+  GROWATT_UNSUPPORTED_DEVICE: "A Growatt fiókban nem választható egyértelműen támogatott erőmű vagy eszköz.",
+};
+
+export class GrowattError extends Error {
+  constructor(public readonly code: GrowattErrorCode, public readonly status: number, options?: { cause?: unknown }) {
+    super(safeMessages[code], options); this.name = "GrowattError";
+  }
+}
+
+export const growattHttpStatus = (code: GrowattErrorCode) => code === "GROWATT_NOT_CONFIGURED" ? 503 : code === "GROWATT_AUTH_FAILED" ? 401 : code === "GROWATT_PERMISSION_DENIED" ? 403 : code === "GROWATT_RATE_LIMITED" ? 429 : code === "GROWATT_NO_PLANT" || code === "GROWATT_NO_DEVICE" ? 404 : code === "GROWATT_UNSUPPORTED_DEVICE" ? 409 : code === "GROWATT_INVALID_RESPONSE" ? 502 : 503;
+export function asGrowattError(error: unknown) { return error instanceof GrowattError ? error : new GrowattError("GROWATT_UNAVAILABLE", 503, { cause: error }); }

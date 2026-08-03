@@ -8,3 +8,6 @@ coverage
 .npm-cache
 *.tsbuildinfo
 *.zip
+
+.vercel
+.env*
