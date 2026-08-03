@@ -2,13 +2,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { defaultGrowattSyncRange, getGrowattHistory, syncGrowattHistoryRange, type GrowattHistoryResponse, type GrowattSyncResponse } from "@/lib/growatt/history-ui";
 import { inclusiveDays, validIsoDate } from "@/lib/growatt/historical";
+import { suppressGrowattLatestRefresh } from "@/lib/growatt/ui";
 
 export function GrowattHistoricalSyncCard() {
   const initial = defaultGrowattSyncRange(), [startDate, setStartDate] = useState(initial.startDate), [endDate, setEndDate] = useState(initial.endDate), [history, setHistory] = useState<GrowattHistoryResponse | null>(null), [result, setResult] = useState<GrowattSyncResponse | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(true), [syncing, setSyncing] = useState(false), running = useRef(false);
   const load = useCallback(async () => { setLoading(true); try { setHistory(await getGrowattHistory(startDate, endDate)); setError(""); } catch { setError("A historikus Growatt-adatok nem tölthetők be."); } finally { setLoading(false); } }, [startDate, endDate]);
   useEffect(() => { void load(); }, [load]);
   const days = validIsoDate(startDate) && validIsoDate(endDate) && startDate <= endDate ? inclusiveDays(startDate, endDate) : 0;
-  async function sync() { if (running.current || days < 1 || days > 28) return; running.current = true; setSyncing(true); setError(""); try { const next = await syncGrowattHistoryRange(startDate, endDate); setResult(next); await load(); } catch (value) { setError(value instanceof Error && value.message === "SYNC_ALREADY_RUNNING" ? "Már fut egy historikus szinkron." : value instanceof Error && value.message === "HISTORY_DATABASE_WRITE_FAILED" ? "Az inverteradatok lekérése sikerült, de az adatbázisba mentés nem sikerült." : "A historikus szinkron nem fejeződött be. A korábban sikeresen mentett blokkok megmaradtak."); } finally { setSyncing(false); running.current = false; } }
+  async function sync() { if (running.current || days < 1 || days > 28) return; running.current = true; setSyncing(true); setError(""); try { const next = await syncGrowattHistoryRange(startDate, endDate); suppressGrowattLatestRefresh(); setResult(next); await load(); } catch (value) { setError(value instanceof Error && value.message === "SYNC_ALREADY_RUNNING" ? "Már fut egy historikus szinkron." : value instanceof Error && value.message === "HISTORY_DATABASE_WRITE_FAILED" ? "Az inverteradatok lekérése sikerült, de az adatbázisba mentés nem sikerült." : "A historikus szinkron nem fejeződött be. A korábban sikeresen mentett blokkok megmaradtak."); } finally { setSyncing(false); running.current = false; } }
   const rows = history?.rows ?? [], missing = days ? Math.max(0, days - rows.length) : 0;
   return <section className="mt-4 rounded-2xl border border-slate-200 p-4"><h3 className="font-black">Historikus termelési adatok</h3><p className="mt-1 text-xs text-slate-500">Kézi, legfeljebb 28 napos Growatt invertertermelés-szinkron. Nem módosít villanyórás adatot.</p>
     {loading && !history && <p role="status" className="mt-3 text-sm">Historikus adatok betöltése…</p>}
