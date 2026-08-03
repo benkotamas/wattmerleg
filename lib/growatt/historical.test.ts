@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chunkGrowattDateRange, dailyDatabaseRow, mapGrowattDailyEnergy, summarizeGrowattMonth, validateGrowattDateRange, type GrowattDailyEnergyRow } from "./historical";
+import { chunkGrowattDateRange, dailyDatabaseRow, mapGrowattDailyEnergy, missingGrowattDateRanges, summarizeGrowattMonth, validateGrowattDateRange, type GrowattDailyEnergyRow } from "./historical";
 
 describe("Growatt napi historikus mapper", () => {
   const map = (energy: unknown, date = "2026-08-02", currentLocalDate = "2026-08-03") => mapGrowattDailyEnergy({ time_unit: "day", count: 1, energys: [{ date, energy }] }, { timezone: "Europe/Budapest", currentLocalDate, fetchedAt: "2026-08-03T10:00:00Z" });
@@ -16,6 +16,7 @@ describe("Growatt dátumtartomány és chunking", () => {
   it("28 napot elfogad és pontosan négy 7 napos blokkra bont", () => { expect(validateGrowattDateRange("2026-07-07","2026-08-03","2026-08-03")).toBe(28); expect(chunkGrowattDateRange("2026-07-07","2026-08-03")).toHaveLength(4); });
   it("29 napot és jövőbeli napot tilt", () => { expect(() => validateGrowattDateRange("2026-07-06","2026-08-03","2026-08-03")).toThrow("DATE_RANGE_TOO_LONG"); expect(() => validateGrowattDateRange("2026-08-04","2026-08-04","2026-08-03")).toThrow("FUTURE_DATE"); });
   it("DST környékén helyi naptári napokat nem órákat darabol", () => expect(chunkGrowattDateRange("2026-03-27","2026-04-03")).toEqual([{ startDate:"2026-03-27",endDate:"2026-04-02"},{startDate:"2026-04-03",endDate:"2026-04-03"}]));
+  it("a hiányzó napokból csak összefüggő tartományokat képez",()=>expect(missingGrowattDateRanges("2026-08-01","2026-08-07",["2026-08-01","2026-08-04","2026-08-07"])).toEqual([{startDate:"2026-08-02",endDate:"2026-08-03"},{startDate:"2026-08-05",endDate:"2026-08-06"}]));
 });
 
 describe("Growatt havi coverage", () => {

@@ -6,16 +6,17 @@ type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
 export type GrowattRequest = { method?: GrowattHttpMethod; path: string; query?: Record<string, string>; body?: unknown; form?: Record<string, string> };
 
 export class GrowattClient {
-  constructor(private readonly options: { baseUrl: string; token: string; authHeader: string; authValueTemplate: string; userAgent?: string; timeoutMs?: number; fetcher?: FetchLike }) {}
+  constructor(private readonly options: { baseUrl: string; token: string; authHeader: string; authValueTemplate: string; userAgent?: string; timeoutMs?: number; fetcher?: FetchLike; maxAttempts?: number }) {}
   get(path: string, query: Record<string, string> = {}) { return this.request({ method: "GET", path, query }); }
   async request(request: GrowattRequest): Promise<unknown> {
     let last: GrowattError | undefined;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const maxAttempts = Math.max(1, this.options.maxAttempts ?? 2);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try { return await this.once(request); }
       catch (error) {
         const normalized = error instanceof GrowattError ? error : new GrowattError("GROWATT_UNAVAILABLE", 503, { cause: error });
         last = normalized;
-        if (attempt === 1 || !new Set(["GROWATT_TIMEOUT", "GROWATT_RATE_LIMITED", "GROWATT_UNAVAILABLE"]).has(normalized.code)) throw normalized;
+        if (attempt === maxAttempts - 1 || !new Set(["GROWATT_TIMEOUT", "GROWATT_RATE_LIMITED", "GROWATT_UNAVAILABLE"]).has(normalized.code)) throw normalized;
       }
     }
     throw last!;

@@ -31,10 +31,10 @@ export function processV1Envelope(raw: unknown): unknown {
 
 export class GrowattOpenApiV1 {
   private readonly client: GrowattClient;
-  constructor(token: string, options: { baseUrl?: string; fetcher?: ConstructorParameters<typeof GrowattClient>[0]["fetcher"] } = {}) {
+  constructor(token: string, options: { baseUrl?: string; fetcher?: ConstructorParameters<typeof GrowattClient>[0]["fetcher"]; maxAttempts?: number } = {}) {
     const normalizedToken = token.trim();
     if (!normalizedToken || normalizedToken === "[SENSITIVE]" || /^(YOUR_|<|placeholder)/i.test(normalizedToken)) throw new GrowattError("GROWATT_NOT_CONFIGURED", 503);
-    this.client = new GrowattClient({ baseUrl: options.baseUrl ?? GROWATT_V1_BASE_URL, token: normalizedToken, authHeader: "token", authValueTemplate: "{token}", userAgent: GROWATT_V1_USER_AGENT, fetcher: options.fetcher });
+    this.client = new GrowattClient({ baseUrl: options.baseUrl ?? GROWATT_V1_BASE_URL, token: normalizedToken, authHeader: "token", authValueTemplate: "{token}", userAgent: GROWATT_V1_USER_AGENT, fetcher: options.fetcher, maxAttempts: options.maxAttempts });
   }
   private async call(method: "GET" | "POST", path: V1Path, parameters: Record<string, string> = {}) {
     assertV1ReadOnly(method, path);

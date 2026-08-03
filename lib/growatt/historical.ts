@@ -21,6 +21,11 @@ export function chunkGrowattDateRange(startDate: string, endDate: string, maxChu
   while (cursor <= endDate) { const chunkEnd = [addLocalDays(cursor, maxChunkDays - 1), endDate].sort()[0]; result.push({ startDate: cursor, endDate: chunkEnd }); cursor = addLocalDays(chunkEnd, 1); }
   return result;
 }
+export function missingGrowattDateRanges(startDate: string, endDate: string, existingDates: Iterable<string>): DateRange[] {
+  const existing = new Set(existingDates), ranges: DateRange[] = []; let rangeStart: string | null = null, previous: string | null = null;
+  for (let date = startDate; date <= endDate; date = addLocalDays(date, 1)) { if (!existing.has(date)) { rangeStart ??= date; previous = date; } else if (rangeStart && previous) { ranges.push({ startDate: rangeStart, endDate: previous }); rangeStart = previous = null; } }
+  if (rangeStart && previous) ranges.push({ startDate: rangeStart, endDate: previous }); return ranges;
+}
 
 const object = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 function energy(value: unknown): number | null { const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN; return Number.isFinite(parsed) && parsed >= 0 ? parsed : null; }
