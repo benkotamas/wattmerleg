@@ -1,0 +1,12 @@
+import { describe, expect, it } from "vitest";
+import { requestSnapshotBackfill, snapshotBackfillRange, usableSnapshotPercentages } from "./snapshot-history";
+import { budapestDate } from "@/lib/growatt/history-ui";
+import { monthRange } from "./monthly-analysis";
+describe("solar snapshot history chart", () => {
+  it("self consumption and export add to 100 percent", () => expect(usableSnapshotPercentages([{ pvProductionKwh: 100, selfConsumedPvKwh: 82, gridExportKwh: 18 }])[0]).toEqual({ selfPercent: 82, exportPercent: 18 }));
+  it("does not render an artificial zero bar for unusable production", () => expect(usableSnapshotPercentages([{ pvProductionKwh: 0, selfConsumedPvKwh: 0, gridExportKwh: 0 }])).toEqual([]));
+  it("creates 1/3/12/24 closed-month ranges", () => { expect(snapshotBackfillRange(1, "2026-08-01")).toEqual({ startMonth: "2026-07", endMonth: "2026-07" }); expect(snapshotBackfillRange(3, "2026-08-01")).toEqual({ startMonth: "2026-05", endMonth: "2026-07" }); expect(snapshotBackfillRange(12, "2026-08-01")).toEqual({ startMonth: "2025-08", endMonth: "2026-07" }); expect(snapshotBackfillRange(24, "2026-08-01")).toEqual({ startMonth: "2024-08", endMonth: "2026-07" }); });
+  it("uses Budapest month at the UTC month boundary", () => { const localDate = budapestDate(new Date("2026-07-31T22:30:00Z")); expect(localDate).toBe("2026-08-01"); expect(snapshotBackfillRange(1, localDate)).toEqual({ startMonth: "2026-07", endMonth: "2026-07" }); });
+  it.each([[1,"2026-07","2026-07"],[3,"2026-05","2026-07"],[12,"2025-08","2026-07"],[24,"2024-08","2026-07"]] as const)("posts the selected closed-month range", async (months, startMonth, endMonth) => { let calledUrl = "", calledInit: RequestInit | undefined; const fetcher: typeof fetch = async (url, init) => { calledUrl = String(url); calledInit = init; return new Response("{}", { status: 200 }); }; await requestSnapshotBackfill(fetcher, months, "2026-08-01"); expect(calledUrl).toBe("/api/solar/monthly-snapshots/backfill"); expect(calledInit).toMatchObject({ method: "POST" }); expect(JSON.parse(String(calledInit?.body))).toEqual({ startMonth, endMonth }); });
+  it("uses exactly the same 24 closed months for history and backfill", () => { const backfill = snapshotBackfillRange(24, "2026-08-03"), history = snapshotBackfillRange(24, "2026-08-03"); expect(history).toEqual(backfill); expect(history).toEqual({ startMonth: "2024-08", endMonth: "2026-07" }); expect(monthRange(history.startMonth, history.endMonth)).toHaveLength(24); });
+});

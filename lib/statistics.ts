@@ -21,6 +21,7 @@ export interface MonthlyStat {
   coversRequiredPeriodEnd: boolean;
   fullCalendarMonthCoverage: boolean;
   sourceIntervalCount: number;
+  sourceReadingIds?: string[];
 }
 
 function followingMonth(month: string): string { const [year, value] = month.split("-").map(Number); return `${year + (value === 12 ? 1 : 0)}-${String(value === 12 ? 1 : value + 1).padStart(2, "0")}`; }
@@ -46,7 +47,7 @@ export function monthlyStatistics(readings: MeterReading[], timeZone = "Europe/B
         consumption: 0, production: 0, balance: 0, estimated: false,
         hasDataWarning: false, ignoredConsumptionIntervals: 0, ignoredProductionIntervals: 0,
         coverageStartAt: cursor.toISOString(), coverageEndAt: segmentEnd.toISOString(), coverageStartLocalDate: localIsoDate(cursor, timeZone), coverageEndLocalDate: localIsoDate(segmentEnd, timeZone),
-        coversCalendarMonthStart: false, coversRequiredPeriodEnd: false, fullCalendarMonthCoverage: false, sourceIntervalCount: 0,
+        coversCalendarMonthStart: false, coversRequiredPeriodEnd: false, fullCalendarMonthCoverage: false, sourceIntervalCount: 0, sourceReadingIds: [],
       };
       const ratio = segmentDays / delta.elapsedDays;
       if (delta.consumption >= 0) stat.consumption += delta.consumption * ratio;
@@ -58,6 +59,9 @@ export function monthlyStatistics(readings: MeterReading[], timeZone = "Europe/B
       if (cursor.getTime() < Date.parse(stat.coverageStartAt)) { stat.coverageStartAt = cursor.toISOString(); stat.coverageStartLocalDate = localIsoDate(cursor, timeZone); }
       if (segmentEnd.getTime() > Date.parse(stat.coverageEndAt)) { stat.coverageEndAt = segmentEnd.toISOString(); stat.coverageEndLocalDate = localIsoDate(segmentEnd, timeZone); }
       stat.sourceIntervalCount += 1;
+      stat.sourceReadingIds ??= [];
+      if (!stat.sourceReadingIds.includes(previous.id)) stat.sourceReadingIds.push(previous.id);
+      if (!stat.sourceReadingIds.includes(current.id)) stat.sourceReadingIds.push(current.id);
       result.set(key, stat);
       cursor = segmentEnd;
     }

@@ -8,11 +8,13 @@ export interface SolarPvDailyRow { localDate: string; energyKwh: number; quality
 export interface SolarAnalysisResponse { startMonth: string; endMonth: string; timezone: string; months: SolarMonthAnalysis[]; summary: ReturnType<typeof summarizeSolarPeriod> }
 
 export const METER_MONTH_TIMEZONE = "Europe/Budapest";
-export const validYearMonth = (value: string): boolean => /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+export const validYearMonth = (value: string): boolean => /^(19\d{2}|[2-9]\d{3})-(0[1-9]|1[0-2])$/.test(value);
 export const monthStart = (month: string): string => `${month}-01`;
-export function nextMonth(month: string): string { const [year, value] = month.split("-").map(Number), date = new Date(Date.UTC(year, value, 1)); return date.toISOString().slice(0, 7); }
-export function monthEnd(month: string): string { const [year, value] = month.split("-").map(Number); return new Date(Date.UTC(year, value, 0)).toISOString().slice(0, 10); }
-export function monthRange(startMonth: string, endMonth: string): string[] { const result: string[] = []; for (let month = startMonth; month <= endMonth; month = nextMonth(month)) result.push(month); return result; }
+const monthIndex = (month: string): number => { const [year, value] = month.split("-").map(Number); return year * 12 + value - 1; };
+const monthFromIndex = (index: number): string => `${Math.floor(index / 12)}-${String(index % 12 + 1).padStart(2, "0")}`;
+export function nextMonth(month: string): string { if (!validYearMonth(month)) throw new Error("INVALID_YEAR_MONTH"); return monthFromIndex(monthIndex(month) + 1); }
+export function monthEnd(month: string): string { if (!validYearMonth(month)) throw new Error("INVALID_YEAR_MONTH"); const [year, value] = month.split("-").map(Number), leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0), days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][value - 1]; return `${month}-${days}`; }
+export function monthRange(startMonth: string, endMonth: string): string[] { if (!validYearMonth(startMonth) || !validYearMonth(endMonth) || startMonth > endMonth) return []; const start = monthIndex(startMonth), end = monthIndex(endMonth); return Array.from({ length: end - start + 1 }, (_, offset) => monthFromIndex(start + offset)); }
 
 export function buildSolarConsumptionAnalysis(options: { startMonth: string; endMonth: string; currentLocalDate: string; readings: MeterReading[]; pvRows: SolarPvDailyRow[]; meterTimezone?: string }): SolarAnalysisResponse {
   const meterTimezone = options.meterTimezone ?? METER_MONTH_TIMEZONE, currentYearMonth = options.currentLocalDate.slice(0, 7), meterByMonth = new Map(monthlyStatistics(options.readings).map(stat => [stat.month, stat]));

@@ -12,12 +12,14 @@ import { MeterMonthList } from "@/components/statistics/meter-month-list";
 import { StatisticsViewTabs, useStatisticsView } from "@/components/statistics/view-tabs";
 import { GrowattPvHistorySection } from "@/components/growatt/pv-history-section";
 import { SolarConsumptionAnalysisSection } from "@/components/solar/consumption-analysis-section";
+import { SolarMonthlySnapshotHistory } from "@/components/solar/monthly-snapshot-history";
 import { useEnergyData } from "@/lib/data";
 import { estimateAmount } from "@/lib/calculations";
 import { monthlyStatistics, type MonthlyStat } from "@/lib/statistics";
 import { heatingSeasonStatistics, seasonalAnnualForecast } from "@/lib/seasonal-forecast";
 import { budapestDate } from "@/lib/growatt/history-ui";
 import { solarMonthRangeFromSearch, validateSolarMonthRange } from "@/lib/solar/range-validation";
+import { snapshotBackfillRange } from "@/lib/solar/snapshot-history";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type ChartView = "combined" | "consumption" | "production" | "balance";
@@ -29,12 +31,13 @@ const previousMonth = (month: string) => { const [year, value] = month.split("-"
 export default function StatisticsPage() {
   const energy = useEnergyData(), { view, setView } = useStatisticsView();
   const [chartView, setChartView] = useState<ChartView>("combined"), [visitedSolar, setVisitedSolar] = useState(false);
+  const snapshotHistoryRange = snapshotBackfillRange(24, budapestDate());
   useEffect(() => { if (view === "solar") setVisitedSolar(true); }, [view]);
   if (energy.loading || energy.error) return <AppShell><PageState loading={energy.loading} error={energy.error}/></AppShell>;
   const stats = monthlyStatistics(energy.readings), yearly = stats.reduce((sum, row) => ({ consumption: sum.consumption + row.consumption, production: sum.production + row.production }), { consumption: 0, production: 0 }), balance = yearly.consumption - yearly.production;
   return <AppShell><PageHeader title="Statisztika" description={descriptions[view]}/><StatisticsViewTabs value={view} onChange={setView}/><div id="statistics-content" className="scroll-mt-4">
     {view === "meter" && <section id="statistics-panel-meter" role="tabpanel" aria-labelledby="statistics-tab-meter"><MeterView stats={stats} yearly={yearly} balance={balance} chartView={chartView} setChartView={setChartView} periods={energy.periods} readings={energy.allReadings} tariff={energy.tariff}/></section>}
-    {visitedSolar && <section id="statistics-panel-solar" role="tabpanel" aria-labelledby="statistics-tab-solar" hidden={view !== "solar"}><SolarView active={view === "solar"} currentPeriodStart={energy.period?.start_date.slice(0, 7) ?? null} latestMonth={energy.allReadings.at(-1)?.reading_at.slice(0, 7) ?? null}/></section>}
+    {visitedSolar && <section id="statistics-panel-solar" role="tabpanel" aria-labelledby="statistics-tab-solar" hidden={view !== "solar"}><SolarView active={view === "solar"} currentPeriodStart={energy.period?.start_date.slice(0, 7) ?? null} latestMonth={energy.allReadings.at(-1)?.reading_at.slice(0, 7) ?? null}/><div className="mt-5"><SolarMonthlySnapshotHistory startMonth={snapshotHistoryRange.startMonth} endMonth={snapshotHistoryRange.endMonth} active={view === "solar"}/></div></section>}
     {view === "heating" && <section id="statistics-panel-heating" role="tabpanel" aria-labelledby="statistics-tab-heating"><HeatingView energy={energy}/></section>}
   </div></AppShell>;
 }

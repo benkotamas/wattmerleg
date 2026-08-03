@@ -20,4 +20,5 @@ describe("Statisztika információs architektúra", () => {
     expect(page).toContain("<SolarConsumptionAnalysisSection startMonth={startMonth} endMonth={endMonth}");
     expect(page.match(/window\.history\.replaceState/g)).toHaveLength(1);
   });
+  it("uses the same 24 closed-month range for snapshot history as backfill", () => { expect(page).toContain("snapshotBackfillRange(24, budapestDate())"); expect(page).toContain("startMonth={snapshotHistoryRange.startMonth}"); expect(page).toContain("endMonth={snapshotHistoryRange.endMonth}"); });
 });
