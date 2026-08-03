@@ -2,7 +2,7 @@
 
 ## Cél és hatókör
 
-A következő fejlesztési fázis napi Growatt PV-termelési adatok biztonságos tárolását készítheti el, hogy azok később azonos helyi naptári időszakokra összevethetők legyenek a villanyóra mérőállás-különbségeivel. Ez a dokumentum terv: jelenleg nincs historikus tábla, szinkron, cron vagy automatikus számítás.
+A napi Growatt PV-termelési adatok kézi, legfeljebb 28 napos szinkronja és külön statisztikai megjelenítése a `008_growatt_daily_energy.sql` migrációval elkészült. A korábbi 93 napos vagy hosszabb egykéréses backfill csak tartós adatbázis-progress és példányok közötti adatbázis-lock után térhet vissza. Automatikus cron és a villanyórával összefésült számítás továbbra sincs.
 
 Az inverteradat külön információforrás marad. Nem írhatja felül a villanyórás fogyasztást, visszatáplálást, éves energiamérleget, tarifát vagy szolgáltatói számlabecslést.
 
@@ -88,9 +88,9 @@ Az API-token kizárólag szerveroldali környezeti változó. Owner-ellenőrzés
 
 ## Javasolt fejlesztési fázisok
 
-1. A napi `plant/energy` szerződés read-only, maszkolt ellenőrzése és tesztfixture készítése.
-2. Új migráció: tábla, constraint-ek, index, RLS és ownerhez kötött írási út.
-3. Napi mapper, időzóna-kezelés, idempotens upsert és unit/integrációs tesztek.
-4. Kézi, kis tartományú szinkron progresszel és megszakítható backfilllel.
-5. Lefedettség- és adatminőség-ellenőrzés, majd külön becsült PV-statisztikák.
-6. Stabil működés után védett napi szerveroldali szinkron; csak ezt követően opcionális fűtési PV-korrekció.
+1. Elkészült: napi `plant/energy` mapper és szerződéstesztek.
+2. Elkészült: tábla, constraint-ek, index, RLS és ownerhez kötött írási út.
+3. Elkészült: időzóna-kezelés, idempotens upsert és unit/route tesztek.
+4. Elkészült: kézi, kis tartományú, részleges eredményt is megőrző szinkron.
+5. Következő kör: tartós, adatbázisban vezetett backfill-progress és felhasználói megszakítás több kérésen át.
+6. Később: stabil működés után védett napi szerveroldali szinkron, majd külön becsült PV/villanyóra elemzés és opcionális fűtési PV-korrekció.

@@ -1,4 +1,4 @@
-export type GrowattErrorCode = "GROWATT_NOT_CONFIGURED" | "GROWATT_AUTH_FAILED" | "GROWATT_PERMISSION_DENIED" | "GROWATT_RATE_LIMITED" | "GROWATT_TIMEOUT" | "GROWATT_UNAVAILABLE" | "GROWATT_INVALID_RESPONSE" | "GROWATT_NO_PLANT" | "GROWATT_NO_DEVICE" | "GROWATT_UNSUPPORTED_DEVICE";
+export type GrowattErrorCode = "GROWATT_NOT_CONFIGURED" | "GROWATT_AUTH_FAILED" | "GROWATT_PERMISSION_DENIED" | "GROWATT_RATE_LIMITED" | "GROWATT_TIMEOUT" | "GROWATT_UNAVAILABLE" | "GROWATT_INVALID_RESPONSE" | "GROWATT_NO_PLANT" | "GROWATT_NO_DEVICE" | "GROWATT_UNSUPPORTED_DEVICE" | "HISTORY_DATABASE_WRITE_FAILED";
 
 const safeMessages: Record<GrowattErrorCode, string> = {
   GROWATT_NOT_CONFIGURED: "A Growatt integráció nincs teljesen konfigurálva.",
@@ -11,6 +11,7 @@ const safeMessages: Record<GrowattErrorCode, string> = {
   GROWATT_NO_PLANT: "A Growatt fiókban nem található erőmű.",
   GROWATT_NO_DEVICE: "A kiválasztott erőműben nem található eszköz.",
   GROWATT_UNSUPPORTED_DEVICE: "A Growatt fiókban nem választható egyértelműen támogatott erőmű vagy eszköz.",
+  HISTORY_DATABASE_WRITE_FAILED: "Az inverteradatok lekérése sikerült, de az adatbázisba mentés nem sikerült.",
 };
 
 export class GrowattError extends Error {
