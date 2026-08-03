@@ -1,0 +1,8 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+const sql = readFileSync("supabase/migrations/010_growatt_history_sync_jobs.sql", "utf8");
+describe("010 Growatt sync job migráció", () => {
+  it("claim tokent, legalább ötperces lease-t, expected cursort és lejárt retry feltételt használ", () => { for (const value of ["claim_token uuid", "lease_expires_at", "expected_cursor", "cursor_date=expected_cursor", "retry_after is null or retry_after<=now()", "lease_expires_at<=now()", "new_claim_token", "lease_seconds integer default 300"]) expect(sql.replace(/\s/g, "")).toContain(value.replace(/\s/g, "")); });
+  it("finish csak saját claim tokennel ír, pause-t megőriz és cancellinget cancelledre zár", () => { expect(sql).toContain("claim_token=expected_claim_token"); expect(sql).toContain("when status='paused' then 'paused'"); expect(sql).toContain("when status='cancelling' then 'cancelled'"); });
+  it("aktív jobot, snapshot checkpointot, retry countereket, atomikus cancelt, RLS-t és CHECK-eket tartalmaz", () => { expect(sql).toMatch(/unique index[\s\S]*retry_pending[\s\S]*failed[\s\S]*cancelling/i); expect(sql).toContain("snapshot_refreshed_months"); expect(sql).toContain("snapshot_failed_months");expect(sql).toContain("history_retry_count >= 0");expect(sql).toContain("snapshot_retry_count >= 0");expect(sql).toContain("cancel_growatt_history_sync_job");expect(sql).toContain("status=expected_status"); expect(sql).toContain("completed_days between 0 and total_days"); expect(sql).toContain("enable row level security"); expect(sql).toContain("auth.uid()=user_id"); });
+});

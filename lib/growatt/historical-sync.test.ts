@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("next/cache", () => ({ unstable_cache: (operation: () => unknown) => operation }));
 
 import { GrowattError } from "./errors";
 import { syncGrowattHistory, type HistoricalCoverageRecord, type HistoricalDatabase } from "./historical-sync";

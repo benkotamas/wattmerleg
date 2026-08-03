@@ -4,6 +4,8 @@
 
 A `/api/growatt/latest` autentikáció és tulajdonos-ellenőrzés után éri el a cache-t. A Next.js Data Cache (`unstable_cache`) a Vercel által megosztott réteg: a publikus latest DTO-t és a rate-limit sentinelt tárolja, belső Growatt-azonosítót vagy tokent nem.
 
+A historikus job plant-feloldása szintén két rétegű. A 15 perces `unstable_cache` a Vercel-kompatibilis, megosztott pozitív cache; kulcsa SHA-256 konfiguráció/credential fingerprint. A modulon belüli `Map` csak az adott serverless instance párhuzamos kéréseit vonja össze single-flight módon. Hibás, auth- vagy rate-limit választ egyik réteg sem ment pozitív találatként. A feloldott plantazonosító kizárólag szerveroldalon marad.
+
 Az azonos fingerprinthez tartozó process-local Map csak best-effort single-flight és stale fallback. Ez csökkenti az egy példányon belüli párhuzamos hívásokat, de a korábbi sikeres stale adat Vercel serverless példányok közötti megőrzése nem garantált. A böngésző allowlistelt localStorage snapshotja ettől független kliensoldali fallback.
 
 ## Igazolt állapot
