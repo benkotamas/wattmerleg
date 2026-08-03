@@ -19,6 +19,24 @@ export const freshnessLabel: Record<GrowattFreshness, string> = { fresh: "Friss 
 export function formatGrowattPower(watts: number | null): string { if (watts === null) return "Nincs adat"; return Math.abs(watts) < 1000 ? `${watts.toLocaleString("hu-HU", { maximumFractionDigits: 0 })} W` : `${(watts / 1000).toLocaleString("hu-HU", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kW`; }
 export function formatGrowattEnergy(kwh: number): string { return `${kwh.toLocaleString("hu-HU", { maximumFractionDigits: 2 })} kWh`; }
 export function formatGrowattMeasuredAt(value: string | null): string { if (!value || !Number.isFinite(Date.parse(value))) return "Ismeretlen mérési időpont"; return new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit", year: "numeric", month: "short", day: "numeric" }).format(new Date(value)); }
+export function formatGrowattRelativeTime(value: string | null, now = Date.now()): string | null {
+  if (!value) return null;
+  const measured = Date.parse(value); if (!Number.isFinite(measured)) return null;
+  const minutes = Math.max(0, Math.floor((now - measured) / 60_000));
+  if (minutes < 1) return "kevesebb mint 1 perce";
+  if (minutes < 60) return `${minutes} perce`;
+  const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours} órája`;
+  return `${Math.floor(hours / 24)} napja`;
+}
+
+const deviceTypeLabels: Record<string, string> = {
+  "1": "Hálózatra tápláló inverter", "2": "Energiatároló", "3": "Egyéb Growatt eszköz", "4": "Growatt MAX inverter", "5": "Growatt SPH/MIX hibrid inverter",
+  "6": "Growatt SPA", "7": "Growatt MIN/TLX inverter", "8": "Growatt PCS", "9": "Growatt HPS", "10": "Growatt PBD",
+};
+export function growattDeviceTypeLabel(value: string | null): string { return value ? deviceTypeLabels[value.trim()] ?? "Ismeretlen eszköztípus" : "Ismeretlen eszköztípus"; }
+export function growattDeviceStatusDisplay(value: string | null): { label: string; technicalCode: string | null } {
+  return value?.trim() ? { label: "Elérhető adat", technicalCode: value.trim() } : { label: "Nincs adat", technicalCode: null };
+}
 
 const errorMessages: Record<string, string> = {
   UNAUTHORIZED: "A Growatt-adatok megtekintéséhez jelentkezz be újra.", FORBIDDEN: "A bejelentkezett felhasználó nem jogosult ehhez a Growatt-integrációhoz.",
