@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { TariffSettings } from "@/lib/types";
 import { SolarProductionCard } from "@/components/growatt/solar-production-card";
 import { GrowattHistoricalSyncCard } from "@/components/growatt/historical-sync-card";
+import { clearGrowattBrowserCache } from "@/lib/growatt/ui";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function SettingsPage() {
     setClosing(true); const { error } = await createClient().rpc("close_settlement_period", { period_id: period.id }); setClosing(false);
     if (error) setMessage(error.message); else { setMessage("Az időszak lezárult, az új időszak elindult."); void refresh(); }
   }
-  async function logout() { await createClient().auth.signOut(); router.replace("/belepes"); router.refresh(); }
+  async function logout() { try { await createClient().auth.signOut(); } finally { clearGrowattBrowserCache(); router.replace("/belepes"); router.refresh(); } }
   if (loading || error) return <AppShell><PageState loading={loading} error={error}/></AppShell>;
   return (
     <AppShell>

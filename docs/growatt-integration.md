@@ -1,5 +1,11 @@
 # Growatt / ShinePhone integráció
 
+## Latest cache és Vercel
+
+A `/api/growatt/latest` autentikáció és tulajdonos-ellenőrzés után éri el a cache-t. A Next.js Data Cache (`unstable_cache`) a Vercel által megosztott réteg: a publikus latest DTO-t és a rate-limit sentinelt tárolja, belső Growatt-azonosítót vagy tokent nem.
+
+Az azonos fingerprinthez tartozó process-local Map csak best-effort single-flight és stale fallback. Ez csökkenti az egy példányon belüli párhuzamos hívásokat, de a korábbi sikeres stale adat Vercel serverless példányok közötti megőrzése nem garantált. A böngésző allowlistelt localStorage snapshotja ettől független kliensoldali fallback.
+
 ## Igazolt állapot
 
 2026-08-02-án nyilvánosan elérhető hivatalos forrásból az alábbiak voltak igazolhatók:

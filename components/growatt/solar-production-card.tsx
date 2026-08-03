@@ -4,20 +4,24 @@ import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, Sun } from "lucide-react";
 import type { GrowattUiData, GrowattUiError } from "@/lib/growatt/ui";
-import { fetchGrowattUiData, formatGrowattEnergy, formatGrowattMeasuredAt, formatGrowattPower, formatGrowattRelativeTime, freshnessLabel, growattCapabilityLabels, growattDeviceStatusDisplay, growattDeviceTypeLabel, growattErrorMessage, growattFreshness, loadGrowattSessionSnapshot } from "@/lib/growatt/ui";
+import { fetchGrowattUiData, formatGrowattEnergy, formatGrowattMeasuredAt, formatGrowattPower, formatGrowattRelativeTime, freshnessLabel, growattBrowserStateForStorageEvent, growattCapabilityLabels, growattDeviceStatusDisplay, growattDeviceTypeLabel, growattErrorMessage, growattFreshness, loadGrowattSessionSnapshot } from "@/lib/growatt/ui";
 
 export function SolarProductionCard({ diagnostic = false }: { diagnostic?: boolean }) {
   const [data, setData] = useState<GrowattUiData | null>(() => loadGrowattSessionSnapshot());
   const [error, setError] = useState<GrowattUiError | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, setClock] = useState(0);
   const running = useRef<Promise<void> | null>(null);
   const refresh = useCallback((force = false) => {
     if (running.current) return running.current;
     setError(null); setLoading(true);
-    const request = fetchGrowattUiData(fetch, { force }).then(setData).catch(value => setError(normalizeError(value))).finally(() => { setLoading(false); running.current = null; });
+    const request = fetchGrowattUiData(fetch, { force }).then(setData).catch(value => { const normalized = normalizeError(value); if (normalized.status === 401 || normalized.status === 403) setData(null); setError(normalized); }).finally(() => { setLoading(false); running.current = null; });
     running.current = request; return request;
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { const sync = (event: StorageEvent) => { const state = growattBrowserStateForStorageEvent(event.key); if (!state) return; setData(state.data); setError(state.rateLimitedUntil ? { status: 429, code: "GROWATT_RATE_LIMITED", message: "Growatt cooldown active", retryAt: state.rateLimitedUntil } : null); }; window.addEventListener("storage", sync); return () => window.removeEventListener("storage", sync); }, []);
+  const retryAt = data?.rateLimitedUntil ?? error?.retryAt;
+  useEffect(() => { if (!retryAt) return; const timer = window.setTimeout(() => { setData(current => current ? { ...current, rateLimitedUntil: undefined } : current); setError(current => current?.code === "GROWATT_RATE_LIMITED" || current?.status === 429 ? null : current); setClock(value => value + 1); }, Math.max(0, retryAt - Date.now()) + 50); return () => window.clearTimeout(timer); }, [retryAt]);
   return <SolarProductionCardView diagnostic={diagnostic} data={data} error={error} loading={loading} onRefresh={() => void refresh(true)}/>;
 }
 
@@ -26,19 +30,22 @@ function normalizeError(value: unknown): GrowattUiError { if (typeof value === "
 export function SolarProductionCardView({ diagnostic, data, error, loading, onRefresh }: { diagnostic: boolean; data: GrowattUiData | null; error: GrowattUiError | null; loading: boolean; onRefresh: () => void }) {
   const latest = data?.latest ?? null;
   const freshness = growattFreshness(latest?.measuredAt ?? null);
-  const rateLimited = error?.code === "GROWATT_RATE_LIMITED" || error?.status === 429;
+  const rateLimitedUntil = data?.rateLimitedUntil ?? error?.retryAt;
+  const rateLimited = Boolean(rateLimitedUntil && rateLimitedUntil > Date.now()) || error?.code === "GROWATT_RATE_LIMITED" || error?.status === 429;
   const capabilities = latest?.rawCapabilities.filter(item => growattCapabilityLabels[item]).map(item => growattCapabilityLabels[item]) ?? [];
   return <section className="card mt-4 min-w-0 overflow-hidden p-5" aria-labelledby={diagnostic ? "growatt-settings-title" : "growatt-overview-title"}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Élő inverteradatok</p><h2 id={diagnostic ? "growatt-settings-title" : "growatt-overview-title"} className="mt-1 text-lg font-black">{diagnostic ? "Growatt napelem-integráció" : "Napelem – inverteradatok"}</h2><p className="mt-1 text-xs text-slate-500">Az alkalmazás csak adatot olvas, az invertert nem vezérli.</p></div>
-      <button type="button" className="secondary inline-flex items-center gap-2" disabled={loading} onClick={onRefresh}><RefreshCw size={16} className={loading ? "animate-spin" : ""}/>{loading && data ? "Frissítés…" : "Frissítés"}</button>
+      <button type="button" className="secondary inline-flex items-center gap-2" disabled={loading || rateLimited} onClick={onRefresh}><RefreshCw size={16} className={loading ? "animate-spin" : ""}/>{loading && data ? "Frissítés…" : "Frissítés"}</button>
     </div>
     {loading && !data && <div role="status" className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Growatt-adatok betöltése…</div>}
-    {error && (rateLimited ? <div role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><b>Átmeneti Growatt-korlátozás</b><p className="mt-1">A Growatt ideiglenesen túl sok kérést érzékelt. Próbáld újra később.</p>{data && <p className="mt-1 text-xs">A korábban betöltött inverteradat változatlanul látható.</p>}</div> : <div role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-800"><b>Az inverteradatok nem érhetők el.</b><p className="mt-1">{growattErrorMessage(error)}</p>{data && <p className="mt-1 text-xs">A korábban betöltött adat továbbra is látható.</p>}</div>)}
+    {rateLimited ? <div role="status" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><b>Átmeneti Growatt-korlátozás</b><p className="mt-1">A Growatt ideiglenesen korlátozta a lekéréseket. {latest ? "A korábbi adat továbbra is látható." : "Jelenleg nincs megjeleníthető korábbi adat."}{rateLimitedUntil ? ` Következő próbálkozás: ${formatRetryAt(rateLimitedUntil)}.` : " Próbáld újra később."}</p></div> : error && <div role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-800"><b>Az inverteradatok nem érhetők el.</b><p className="mt-1">{growattErrorMessage(error)}</p>{data && <p className="mt-1 text-xs">A korábban betöltött adat továbbra is látható.</p>}</div>}
     {data && !data.status.configured && <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><b>Nincs konfigurálva</b><p className="mt-1">A Growatt-integráció nincs teljesen beállítva.</p></div>}
     {data?.status.configured && latest && (diagnostic ? <Diagnostic latest={latest} connected={data.status.connected} capabilities={capabilities}/> : <Production latest={latest} freshness={freshness}/>)}
   </section>;
 }
+
+function formatRetryAt(value: number): string { return new Intl.DateTimeFormat("hu-HU", { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 
 function Production({ latest, freshness }: { latest: NonNullable<GrowattUiData["latest"]>; freshness: ReturnType<typeof growattFreshness> }) {
   const energy = [["Ma termelt", latest.todayEnergyKwh], ["Ebben a hónapban", latest.monthEnergyKwh], ["Ebben az évben", latest.yearEnergyKwh], ["Összes inverteres termelés", latest.lifetimeEnergyKwh]] as const;

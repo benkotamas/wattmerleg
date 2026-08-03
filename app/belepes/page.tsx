@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clearGrowattBrowserCache } from "@/lib/growatt/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function LoginPage() {
     try {
       const { error } = await createClient().auth.signInWithPassword({ email, password });
       if (error) throw error;
+      clearGrowattBrowserCache();
       router.replace("/"); router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Sikertelen bejelentkezés.");
