@@ -53,4 +53,12 @@ describe("monthly statistics data quality", () => {
     const estimate = historicalMonthEstimate(1, [{ month: 1, consumption: 200, production: 50, consumptionSampleCount: 2, productionSampleCount: 2, hasDataWarning: false }], 1, "consumption");
     expect(estimate.confidence).toBe("high");
   });
+
+  it("a hónaphatárt Europe/Budapest helyi dátuma szerint képezi", () => {
+    const [month] = monthlyStatistics([reading("2026-09-30T22:30:00Z", 0, 0), reading("2026-09-30T23:30:00Z", 10, 2)]);
+    expect(month.month).toBe("2026-10");
+    expect(month.consumption).toBe(10);
+  });
+  it("coverage metaadatot ad anélkül, hogy a havi energiaértéket módosítaná", () => { const [month] = monthlyStatistics([reading("2026-07-01T00:00:00+02:00", 100, 20), reading("2026-08-01T00:00:00+02:00", 700, 420)]); expect(month).toMatchObject({ consumption: 600, production: 400, coverageStartLocalDate: "2026-07-01", coverageEndLocalDate: "2026-08-01", coversCalendarMonthStart: true, coversRequiredPeriodEnd: true, fullCalendarMonthCoverage: true, sourceIntervalCount: 1 }); });
+  it("a hónap közepi kezdést és korai véget nem tekinti teljes coverage-nek", () => { const [middle] = monthlyStatistics([reading("2026-07-15T10:00:00+02:00", 0, 0), reading("2026-08-01T00:00:00+02:00", 10, 2)]), [early] = monthlyStatistics([reading("2026-07-01T00:00:00+02:00", 0, 0), reading("2026-07-30T10:00:00+02:00", 10, 2)]); expect(middle.coversCalendarMonthStart).toBe(false); expect(early.coversRequiredPeriodEnd).toBe(false); });
 });

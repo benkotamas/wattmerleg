@@ -12,6 +12,7 @@ import { monthlyStatistics } from "@/lib/statistics";
 import { heatingSeasonStatistics, seasonalAnnualForecast } from "@/lib/seasonal-forecast";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { GrowattPvHistorySection } from "@/components/growatt/pv-history-section";
+import { SolarConsumptionAnalysisSection } from "@/components/solar/consumption-analysis-section";
 
 type ChartView = "combined" | "consumption" | "production" | "balance";
 const views: { id: ChartView; label: string }[] = [
@@ -28,6 +29,7 @@ export default function StatisticsPage() {
   const seasonal = period ? seasonalAnnualForecast(period, readings, allReadings, tariff) : null;
   const latest = allReadings.at(-1);
   const heating = seasonal && latest ? heatingSeasonStatistics(allReadings, new Date(latest.reading_at), tariff) : null;
+  const solarMonths = stats.slice(-24);
   return (
     <AppShell>
       <PageHeader eyebrow="Energiaadatok" title="Statisztika" description="Havi fogyasztás, termelés, egyenleg és szezonális előrejelzések."/>
@@ -42,6 +44,7 @@ export default function StatisticsPage() {
       {heating && <section className="card mt-4 p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold text-orange-700">FŰTÉSI SZEZON</p><h2 className="text-xl font-black">{heating.range.label} {heating.range.active ? "aktuális szezon" : "következő szezon"}</h2></div><span className={`rounded-full px-2 py-1 text-xs font-bold ${heating.range.active ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800"}`}>{heating.range.active ? "Folyamatban" : "Előrejelzés"}</span></div><p className="mt-1 text-sm text-slate-500">{new Intl.DateTimeFormat("hu-HU", { dateStyle: "long" }).format(heating.range.start)} – {new Intl.DateTimeFormat("hu-HU", { dateStyle: "long" }).format(heating.range.end)}</p><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4"><HeatingValue label="Eddigi fogyasztás" value={formatKwh(heating.actualConsumption)}/><HeatingValue label="Napi átlag" value={formatKwh(heating.dailyAverage)}/><HeatingValue label="Havi átlag" value={formatKwh(heating.monthlyAverage)}/><HeatingValue label="Szezonális előrejelzés" value={formatKwh(heating.expectedTotal)}/><HeatingValue label="Historikus szezonátlag" value={heating.historicalAverage === null ? "Nincs adat" : formatKwh(heating.historicalAverage)}/><div className="col-span-2"><ConfidenceExplanation level={heating.forecastConfidence} context="forecast" compact/></div><HeatingValue label="Előző szezon összesen" value={heating.previousTotal === null ? "Nincs adat" : formatKwh(heating.previousTotal)}/><HeatingValue label="Előző szezon azonos pontjához" value={heating.changeAtSamePointPercent === null ? "Nincs adat" : `${heating.changeAtSamePointPercent > 0 ? "+" : ""}${heating.changeAtSamePointPercent.toLocaleString("hu-HU", { maximumFractionDigits: 1 })}%`}/></div><details className="mt-5 rounded-xl bg-slate-50 p-3"><summary className="cursor-pointer font-bold">Fűtési szezon havi forecastja</summary><div className="mt-3 space-y-2">{heating.months.map(month => <div key={month.month} className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 text-sm last:border-0"><span className="font-bold capitalize">{month.label}</span><span className="text-right tabular-nums">{formatKwh((month.actualConsumption ?? 0) + (month.expectedConsumption ?? 0))} · {month.expectedConsumption === null ? "tényleges" : month.actualConsumption ? "tényleges + becsült" : "becsült"}</span></div>)}</div></details>{heating.history.length > 0 && <div className="mt-5 border-t border-slate-100 pt-4"><h3 className="font-black">Fűtési szezonok összehasonlítása</h3><div className="mt-2 space-y-2">{heating.history.map(item => <div key={item.label} className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"><span className="font-bold">{item.label} fűtési szezon</span><span className="tabular-nums">{formatKwh(item.consumption)}</span></div>)}<div className="flex items-center justify-between rounded-xl bg-orange-50 p-3 text-sm"><span className="font-bold">{heating.range.label} {heating.range.active ? "aktuális szezon" : "szezonális forecast"}</span><span className="text-right tabular-nums">{heating.range.active ? `eddig ${formatKwh(heating.actualConsumption)} · ` : ""}várható {formatKwh(heating.expectedTotal)}</span></div></div></div>}</section>}
       <PeriodList periods={periods} readings={allReadings} tariff={tariff}/>
       <GrowattPvHistorySection/>
+      <SolarConsumptionAnalysisSection startMonth={solarMonths[0]?.month ?? null} endMonth={solarMonths.at(-1)?.month ?? null}/>
     </AppShell>
   );
 }
