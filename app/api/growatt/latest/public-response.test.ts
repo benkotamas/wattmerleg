@@ -9,6 +9,7 @@ vi.mock("@/lib/growatt/service", async (original) => {
     cached: async (_key: string, _ttl: number, loader: () => Promise<unknown>) => loader(),
     latestEnergy: async () => ({
       plantId: "private-plant", deviceId: "private-device", deviceSerialNumber: "private-serial",
+      deviceType: "1", deviceModel: "MIN", deviceStatus: "online",
       measuredAt: "2026-08-03T07:30:00.000Z", currentPowerW: 100, todayEnergyKwh: 1,
       monthEnergyKwh: 2, yearEnergyKwh: 3, lifetimeEnergyKwh: 4, gridImportPowerW: null,
       gridExportPowerW: null, loadPowerW: null, batteryChargePowerW: null,
@@ -26,6 +27,6 @@ describe("GET /api/growatt/latest publikus válasz", () => {
     expect(body).not.toHaveProperty("plantId");
     expect(body).not.toHaveProperty("deviceId");
     expect(body).not.toHaveProperty("deviceSerialNumber");
-    expect(body).toMatchObject({ measuredAt: "2026-08-03T07:30:00.000Z", currentPowerW: 100, source: "growatt" });
+    expect(body).toMatchObject({ measuredAt: "2026-08-03T07:30:00.000Z", currentPowerW: 100, deviceType: "1", deviceModel: "MIN", deviceStatus: "online", source: "growatt" });
   });
 });
