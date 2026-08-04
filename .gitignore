@@ -1,13 +1,11 @@
 node_modules
 .next
-.env
-.env.local
+.env*
+!.env.example
 coverage
 *.log
 .vercel
 .npm-cache
 *.tsbuildinfo
 *.zip
-
-.vercel
-.env*
+data/*.xlsx

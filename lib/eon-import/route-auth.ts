@@ -1,0 +1,2 @@
+import"server-only";import{createClient}from"@/lib/supabase/server";
+export async function eonImportContext(factory=createClient,owner=process.env.GROWATT_ALLOWED_USER_ID?.trim()){const client=await factory();if(!client)return{access:"unauthorized"as const};const{data:{user}}=await client.auth.getUser();if(!user)return{access:"unauthorized"as const};if(!owner||user.id!==owner)return{access:"forbidden"as const};return{access:"allowed"as const,client,userId:user.id}}

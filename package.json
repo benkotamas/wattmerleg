@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "import:excel": "tsx scripts/import-excel.ts",
-    "growatt:discover": "tsx scripts/growatt-discover.ts"
+    "growatt:discover": "tsx scripts/growatt-discover.ts",
+    "pack:safe": "node scripts/pack-safe.mjs",
+    "eon:inspect": "tsx scripts/inspect-eon-xlsx.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -26,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.0.14",
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
@@ -33,7 +36,6 @@
     "eslint-config-next": "^15.2.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.14",
-    "@tailwindcss/postcss": "^4.0.14",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.8"
