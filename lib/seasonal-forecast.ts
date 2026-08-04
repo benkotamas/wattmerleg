@@ -120,6 +120,7 @@ export function historicalMonthEstimate(month: number, averages: HistoricalMonth
 }
 
 function effectiveStart(period: SettlementPeriod, readings: MeterReading[]) {
+  if (period.opening_reading_at) return new Date(period.opening_reading_at);
   return [...readings].sort((a, b) => new Date(a.reading_at).getTime() - new Date(b.reading_at).getTime()).find(reading => reading.consumption_meter_kwh === period.opening_consumption_meter_kwh && reading.production_meter_kwh === period.opening_production_meter_kwh)?.reading_at ?? period.start_date;
 }
 

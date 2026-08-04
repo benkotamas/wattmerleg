@@ -5,7 +5,7 @@ export type EonImportErrorCode =
   | "EON_FUTURE_INTERVAL_DATE" | "EON_INVALID_SUMMARY_ROW" | "EON_DUPLICATE_SUMMARY_ROW"
   | "EON_NO_INTERVAL_DATA"
   | "EON_UNSAFE_XLSX" | "EON_XLSX_LIMIT_EXCEEDED" | "EON_FORMULA_CELL"
-  | "EON_NEGATIVE_VALUE" | "EON_DUPLICATE_INTERVAL" | "EON_SUMMARY_TOTAL_MISMATCH"
+  | "EON_NEGATIVE_VALUE" | "EON_DUPLICATE_INTERVAL" | "EON_SUMMARY_TOTAL_MISMATCH" | "EON_DST_TEMPLATE_AMBIGUOUS"
   | "EON_SUMMARY_MAX_MISMATCH" | "EON_PREVIEW_HASH_MISMATCH" | "EON_ALREADY_IMPORTED"
   | "EON_IMPORT_FAILED" | "EON_DATABASE_ERROR" | "EON_UNAUTHORIZED" | "EON_FORBIDDEN";
 
@@ -21,6 +21,7 @@ const messages: Record<EonImportErrorCode, string> = {
   EON_NEGATIVE_VALUE: "Negatív energiaérték található.", EON_DUPLICATE_INTERVAL: "Duplikált intervallum található.",
   EON_SUMMARY_TOTAL_MISMATCH: "Az Excel összegző sora nem egyezik az intervallumokkal.", EON_SUMMARY_MAX_MISMATCH: "Az Excel maximum sora nem egyezik az intervallumokkal.",
   EON_PREVIEW_HASH_MISMATCH: "A kiválasztott fájl megváltozott az előnézet óta.", EON_ALREADY_IMPORTED: "Ez a fájl már sikeresen importálva lett.",
+  EON_DST_TEMPLATE_AMBIGUOUS: "A tavaszi óraátállítási E.ON-sablon nem igazítható biztonságosan.",
   EON_IMPORT_FAILED: "Az import nem sikerült.", EON_DATABASE_ERROR: "Az adatok mentése nem sikerült.",
   EON_UNAUTHORIZED: "Bejelentkezés szükséges.", EON_FORBIDDEN: "Ehhez a művelethez nincs jogosultság."
 };

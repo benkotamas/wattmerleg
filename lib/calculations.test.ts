@@ -82,4 +82,13 @@ describe("energy calculations", () => {
     expect(comparison.productionPercent).toBeCloseTo(0);
     expect(comparison.balancePercent).toBeCloseTo(0);
   });
+
+  it("az opening_reading_at pontos időhatára elsődleges, az energia- és tarifaszámítás változatlan", () => {
+    const current = {...period("current", "2025-08-07"), opening_reading_at:"2025-08-07T14:00:00Z"};
+    const forecast = annualForecast(current,[reading("2025-08-08T14:00:00Z",200,80)],customTariff);
+    expect(forecast.elapsedDays).toBe(1);
+    expect(forecast.consumption).toBe(100);
+    expect(forecast.production).toBe(30);
+    expect(forecast.estimatedAmount).toBe(130);
+  });
 });

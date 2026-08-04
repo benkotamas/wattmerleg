@@ -35,3 +35,8 @@ Képleteket a rendszer nem értékel, és cached value jelenlétében is elutas�
 Az XLSX ZIP-tartalma kétszer kerül memóriabeli kibontásra: először a biztonsági preflight ellenőrzi a tényleges hosszakat és CRC-ket, majd a már ellenőrzött, legfeljebb 10 MiB-os bemenetet a SheetJS dolgozza fel saját sor-, oszlop-, cella- és tartalomkorlátokkal. Egyik lépés sem írja ki a fájlokat a fájlrendszerre.
 
 Az XLSX parserfüggőség ismert 0.18.5-ös kockázata ezzel megszűnt. A Gmail-integráció ugyanennek a parsernek a biztonsági korlátait használja.
+# DST és aktuális elszámolási időszak (013)
+
+A szigorúan felismerhető tavaszi E.ON 96 soros sablon négy üres értékpárját a parser nem mérésként kezeli, a 92 értékpárt pedig forrássorrendben rendeli a 92 valódi Europe/Budapest intervallumhoz (`DST_SPRING_TEMPLATE_ALIGNED`). Eltérő minta blokkoló, becslés nincs. Az őszi, 96/100-as forráskorlát hiányos nap marad (`DST_FALLBACK_SOURCE_96`), mesterséges rekord nem készül.
+
+A 013 migráció pontos `opening_reading_at` határt és owner-only `get_current_eon_period_overview()` RPC-t ad. Az E.ON összesítés kizárólag analitikai; a pénzügyi elszámolás változatlanul a kézi mérőállásokon alapul.

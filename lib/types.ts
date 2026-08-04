@@ -14,6 +14,7 @@ export interface MeterReading {
 export interface SettlementPeriod {
   id: string;
   start_date: string;
+  opening_reading_at?: string | null;
   end_date: string | null;
   opening_consumption_meter_kwh: number;
   opening_production_meter_kwh: number;

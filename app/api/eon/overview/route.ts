@@ -1,0 +1,3 @@
+import{NextResponse}from"next/server";import{eonImportContext}from"@/lib/eon-import/route-auth";import{accessFail,fail,noStore}from"@/lib/eon-import/http";import{EonImportError}from"@/lib/eon-import/errors";import{publicEonOverview}from"@/lib/eon-import/overview";
+export const runtime="nodejs";
+export async function GET(){const auth=await eonImportContext();if(auth.access!=="allowed")return accessFail(auth.access);const{data,error}=await auth.client.rpc("get_current_eon_period_overview");if(error)return fail(new EonImportError("EON_DATABASE_ERROR",503));return NextResponse.json({overview:publicEonOverview(data)},{headers:noStore})}

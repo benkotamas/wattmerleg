@@ -11,6 +11,7 @@ import { useEnergyData } from "@/lib/data";
 import { seasonalAnnualForecast, type ForecastConfidence } from "@/lib/seasonal-forecast";
 import { ArrowDownToLine, ArrowUpFromLine, CircleDollarSign, Scale } from "lucide-react";
 import { SolarProductionCard } from "@/components/growatt/solar-production-card";
+import { EonPeriodOverviewCard } from "@/components/eon/period-overview-card";
 
 const formatComparison = (value: number | null | undefined) => value == null
   ? "Nincs összehasonlítható előző adat"
@@ -35,6 +36,7 @@ export default function DashboardPage() {
     <AppShell>
       <PageHeader eyebrow="Aktuális időszak" title="Energia áttekintés" description={`${formatDate(period.start_date)} óta · a legutóbbi mérésig ${Math.round(forecast.elapsedDays)} nap`} actions={<><Link href="/uj-meres" className="primary">Új mérés</Link><Link href="/statisztika" className="secondary">Statisztika</Link></>}/>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ label, value, note, icon: Icon },index) => <KpiCard key={label} label={label} value={value} note={note} accent={(["orange","green","blue","neutral"] as const)[index]} icon={<Icon size={20}/>}/>)}</section>
+      <EonPeriodOverviewCard/>
       <SolarProductionCard/>
       <div className="mt-2 text-right"><Link href="/statisztika?view=solar" className="text-sm font-bold text-emerald-700 hover:underline">Részletes napelemes statisztika</Link></div>
       <section className="card mt-4 p-5">

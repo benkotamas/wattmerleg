@@ -32,6 +32,7 @@ function latestReading(readings: MeterReading[]): MeterReading | undefined {
 }
 
 function periodStartDate(period: SettlementPeriod, readings: MeterReading[]): Date {
+  if (period.opening_reading_at) return new Date(period.opening_reading_at);
   const openingReading = [...readings].sort((a, b) => new Date(a.reading_at).getTime() - new Date(b.reading_at).getTime()).find(reading =>
     reading.consumption_meter_kwh === period.opening_consumption_meter_kwh &&
     reading.production_meter_kwh === period.opening_production_meter_kwh,
