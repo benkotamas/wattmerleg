@@ -8,7 +8,7 @@ type RpcClient = {
   findExistingHash?: (userId: string, hash: string) => PromiseLike<{ exists: boolean; failed: boolean }>;
 };
 
-export async function importEonWorkbook(args: { userId: string; bytes: Uint8Array | Buffer; source: "eon_portal_export"; externalMessageId?: string; expectedSha256?: string; client: RpcClient; referenceDate?: string }) {
+export async function importEonWorkbook(args: { userId: string; bytes: Uint8Array | Buffer; source: "eon_portal_export"; externalMessageId?: string; expectedSha256?: string; client: RpcClient; referenceDate?: string; validateParsed?: (parsed:EonParseResult)=>void }) {
   const calculatedHash = createHash("sha256").update(args.bytes).digest("hex");
   if (args.expectedSha256 && calculatedHash !== args.expectedSha256) throw new EonImportError("EON_PREVIEW_HASH_MISMATCH");
   if (args.client.findExistingHash) {
@@ -18,6 +18,7 @@ export async function importEonWorkbook(args: { userId: string; bytes: Uint8Arra
   }
   const parsed = parseEonWorkbook(args.bytes, { referenceDate: args.referenceDate });
   if (parsed.blockingErrors.length) throw new EonImportError(parsed.blockingErrors[0] as EonImportErrorCode);
+  args.validateParsed?.(parsed);
   const status = parsed.warnings.length ? "completed_with_warnings" : "completed";
   const batch = { attachment_sha256: parsed.sha256, external_message_id: args.externalMessageId ?? null, status, period_start: parsed.periodStart, period_end: parsed.periodEnd, raw_rows: parsed.rawRows, valid_rows: parsed.validRows, invalid_rows: parsed.invalidRows, complete_days: parsed.completeDays, provisional_days: parsed.provisionalDays, incomplete_days: parsed.incompleteDays, warning_codes: parsed.warnings };
   const { data, error } = await args.client.rpc("import_eon_interval_batch", { target_user_id: args.userId, batch, readings: parsed.intervals.map(x => ({ interval_start_utc: x.intervalStartUtc, local_date: x.localDate, import_kwh: x.importKwh, export_kwh: x.exportKwh })) });

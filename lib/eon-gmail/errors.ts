@@ -1,0 +1,3 @@
+export type GmailErrorCode="EON_GMAIL_NOT_CONFIGURED"|"EON_GMAIL_UNAUTHORIZED"|"EON_GMAIL_FORBIDDEN"|"EON_GMAIL_TIMEOUT"|"EON_GMAIL_RATE_LIMITED"|"EON_GMAIL_REQUEST_FAILED"|"EON_GMAIL_INVALID_MESSAGE"|"EON_GMAIL_ATTACHMENT_REJECTED"|"EON_GMAIL_SENDER_REJECTED"|"EON_GMAIL_DATABASE_ERROR"|"EON_GMAIL_TOKEN_INVALID"|"EON_GMAIL_PERIOD_REJECTED"|"EON_GMAIL_SCAN_LIMIT_REACHED";
+export class EonGmailError extends Error{constructor(public code:GmailErrorCode,public status=500,public transient=false){super(code);this.name="EonGmailError"}}
+export const asGmailError=(e:unknown)=>e instanceof EonGmailError?e:new EonGmailError("EON_GMAIL_REQUEST_FAILED",503,true);

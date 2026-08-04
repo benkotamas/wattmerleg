@@ -12,7 +12,9 @@
     "import:excel": "tsx scripts/import-excel.ts",
     "growatt:discover": "tsx scripts/growatt-discover.ts",
     "pack:safe": "node scripts/pack-safe.mjs",
-    "eon:inspect": "tsx scripts/inspect-eon-xlsx.ts"
+    "eon:inspect": "tsx scripts/inspect-eon-xlsx.ts",
+    "gmail:authorize": "tsx scripts/gmail-authorize.ts",
+    "test:eon-gmail-db": "tsx scripts/test-eon-gmail-db.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
