@@ -1,5 +1,11 @@
 # Wattmérleg
 
+## E.ON Gmail-import (012)
+
+A Google Cloud Console-ban engedélyezd a Gmail API-t, hozz létre Desktop OAuth klienst, és kizárólag a `gmail.readonly` scope-ot add meg. Állítsd be az `.env.local` fájlban az `EON_ALLOWED_USER_ID`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_EXPECTED_ADDRESS`, `GMAIL_EON_ALLOWED_FROM`, `GMAIL_EON_QUERY`, `GMAIL_CREDENTIAL_VERSION` és `CRON_SECRET` értékeket, majd futtasd az `npm run gmail:authorize` parancsot. A CLI explicit a projektgyökér `.env.local` fájlját tölti be `override: false` módban. A refresh token közvetlenül ebbe a gitignore-olt fájlba kerül, és nem jelenik meg a terminálon.
+
+Testing státuszú OAuth alkalmazásnál a refresh token 7 nap után lejárhat. Production használathoz publikáld a consent screent; a hozzáférés a Google-fiók biztonsági oldalán bármikor visszavonható. A kézi XLSX-import fallbackként megmarad. A 012 migrációt manuálisan, a 011 után kell futtatni.
+
 Mobil-first Next.js alkalmazás az otthoni áramfogyasztás és napelemes visszatáplálás nyilvántartására. A felület magyar nyelvű, Supabase-belépéssel védett, Vercelre telepíthető és PWA-ként hozzáadható a kezdőképernyőhöz.
 
 ## Funkciók
@@ -111,7 +117,7 @@ Negatív mérődeltát a havi statisztika mérőnként külön kihagy és megjel
 4. Add hozzá a Production, Preview és Development környezetekhez:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-5. Ne add hozzá a `SUPABASE_SERVICE_ROLE_KEY` változót a Vercelhez; a webalkalmazásnak nincs rá szüksége.
+5. A Gmail-import route-okhoz add hozzá a `SUPABASE_SERVICE_ROLE_KEY` változót kizárólag a Vercel **Production** környezetéhez. Preview-ba lehetőleg ne kerüljön, és soha ne kapjon `NEXT_PUBLIC_` előtagot.
 6. Indítsd el a deploymentet.
 7. Supabase Dashboard → **Authentication → URL Configuration**:
    - Site URL: a Vercel production URL;
