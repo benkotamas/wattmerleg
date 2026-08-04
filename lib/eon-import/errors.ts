@@ -4,6 +4,7 @@ export type EonImportErrorCode =
   | "EON_INVALID_DATE" | "EON_INVALID_INTERVAL" | "EON_PARTIAL_INTERVAL_VALUE"
   | "EON_FUTURE_INTERVAL_DATE" | "EON_INVALID_SUMMARY_ROW" | "EON_DUPLICATE_SUMMARY_ROW"
   | "EON_NO_INTERVAL_DATA"
+  | "EON_UNSAFE_XLSX" | "EON_XLSX_LIMIT_EXCEEDED" | "EON_FORMULA_CELL"
   | "EON_NEGATIVE_VALUE" | "EON_DUPLICATE_INTERVAL" | "EON_SUMMARY_TOTAL_MISMATCH"
   | "EON_SUMMARY_MAX_MISMATCH" | "EON_PREVIEW_HASH_MISMATCH" | "EON_ALREADY_IMPORTED"
   | "EON_IMPORT_FAILED" | "EON_DATABASE_ERROR" | "EON_UNAUTHORIZED" | "EON_FORBIDDEN";
@@ -15,6 +16,7 @@ const messages: Record<EonImportErrorCode, string> = {
   EON_INVALID_DATE: "Érvénytelen dátum található.", EON_INVALID_INTERVAL: "Az időpont nem 15 perces intervallumra esik.",
   EON_PARTIAL_INTERVAL_VALUE: "Az intervallum egyik energiaértéke hiányzik.", EON_FUTURE_INTERVAL_DATE: "Jövőbeli mérési dátum található.",
   EON_NO_INTERVAL_DATA: "A munkafüzet nem tartalmaz mérési intervallumokat.",
+  EON_UNSAFE_XLSX: "A munkafüzet tiltott vagy aktív tartalmat tartalmaz.", EON_XLSX_LIMIT_EXCEEDED: "A munkafüzet szerkezeti korlátot lépett túl.", EON_FORMULA_CELL: "A mérési munkafüzet képletcellát tartalmaz.",
   EON_INVALID_SUMMARY_ROW: "Az összesítő sor hibás vagy hiányos.", EON_DUPLICATE_SUMMARY_ROW: "Több azonos típusú összesítő sor található.",
   EON_NEGATIVE_VALUE: "Negatív energiaérték található.", EON_DUPLICATE_INTERVAL: "Duplikált intervallum található.",
   EON_SUMMARY_TOTAL_MISMATCH: "Az Excel összegző sora nem egyezik az intervallumokkal.", EON_SUMMARY_MAX_MISMATCH: "Az Excel maximum sora nem egyezik az intervallumokkal.",

@@ -68,7 +68,7 @@ Regisztrációs oldal szándékosan nincs. Bejelentkezés nélkül az adatoldala
 Az eredeti fájlt az import nem módosítja. Másold az `.xlsx` fájlt a `data` mappába, majd az `.env.local` fájlhoz add hozzá:
 
 ```env
-SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KULCS
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
 SUPABASE_USER_ID=AZ_ELOZO_LEPESBEN_MASOLT_UUID
 # Opcionális, ha több fájl van:
 EXCEL_FILE=data/meresek.xlsx

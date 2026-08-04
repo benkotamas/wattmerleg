@@ -1,6 +1,7 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import * as XLSX from "xlsx";
 import { EonImportError } from "./errors";
+import { readSecureWorkbook } from "./secure-workbook";
 import { expectedIntervals, localKey, parseLocalCell, utcCandidates } from "./date";
 import type { EonDayCoverage, EonInterval, EonParseResult } from "./types";
 
@@ -14,9 +15,8 @@ const findHeader=(rows:unknown[][]):Header|null=>{for(let row=0;row<Math.min(row
 
 export function parseEonWorkbook(input:Uint8Array|Buffer, options:{referenceDate?:string}={}):EonParseResult {
   const bytes=Buffer.from(input); if(bytes.length>EON_MAX_FILE_BYTES)throw new EonImportError("EON_FILE_TOO_LARGE",413); if(bytes.length<4||bytes[0]!==0x50||bytes[1]!==0x4b)throw new EonImportError("EON_INVALID_FILE_TYPE",415);
-  let workbook:XLSX.WorkBook; try{workbook=XLSX.read(bytes,{type:"buffer",cellDates:true,cellFormula:false,bookVBA:true})}catch{throw new EonImportError("EON_INVALID_XLSX")}
-  if(workbook.vbaraw||!workbook.SheetNames.length||workbook.SheetNames.length>EON_MAX_SHEETS)throw new EonImportError("EON_INVALID_XLSX");
-  const candidates:{rows:unknown[][];header:Header}[]=[];let anyWorkbookCell=false; for(const name of workbook.SheetNames){const rows=XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[name],{header:1,raw:true,defval:null});if(rows.length>EON_MAX_ROWS)throw new EonImportError("EON_INVALID_XLSX");if(rows.some(row=>row.some(value=>value!==null&&value!=="")))anyWorkbookCell=true;const header=findHeader(rows);if(header)candidates.push({rows,header})}
+  const sheets=readSecureWorkbook(bytes,EON_MAX_SHEETS,EON_MAX_ROWS);
+  const candidates:{rows:unknown[][];header:Header}[]=[];let anyWorkbookCell=false; for(const rows of sheets){if(rows.some(row=>row?.some(value=>value!==null&&value!=="")))anyWorkbookCell=true;const header=findHeader(rows);if(header)candidates.push({rows,header})}
   if(!candidates.length){if(!anyWorkbookCell)throw new EonImportError("EON_NO_INTERVAL_DATA");throw new EonImportError("EON_WORKSHEET_NOT_FOUND")} if(candidates.length>1)throw new EonImportError("EON_AMBIGUOUS_WORKSHEET");
   const {rows,header}=candidates[0], referenceDate=options.referenceDate??todayBudapest(), occurrences=new Map<string,number>(), seenUtc=new Set<string>(), intervals:EonInterval[]=[], dayRaw=new Map<string,number>(), dayInvalid=new Set<string>(), dayBlank=new Map<string,number>();
   let rawRows=0,invalidRows=0,totalExpected:[number,number]|null=null,maxExpected:[number,number]|null=null,totalRows=0,maxRows=0; const warnings=new Set<string>(),blocking=new Set<string>();
