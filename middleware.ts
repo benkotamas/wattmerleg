@@ -1,7 +1,15 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const EON_GMAIL_CRON_PATH = "/api/cron/eon-gmail";
+
 export async function middleware(request: NextRequest) {
+  // This endpoint is authenticated by its own CRON_SECRET Bearer-token check.
+  // It must be reachable without a Supabase browser session.
+  if (request.nextUrl.pathname === EON_GMAIL_CRON_PATH) {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return NextResponse.next();
@@ -19,10 +27,21 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const isLogin = request.nextUrl.pathname === "/belepes";
-  if (!user && !isLogin) return NextResponse.redirect(new URL("/belepes", request.url));
-  if (user && isLogin) return NextResponse.redirect(new URL("/", request.url));
+
+  if (!user && !isLogin) {
+    return NextResponse.redirect(new URL("/belepes", request.url));
+  }
+
+  if (user && isLogin) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return response;
 }
 
