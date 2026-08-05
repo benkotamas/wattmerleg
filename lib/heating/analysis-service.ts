@@ -1,4 +1,4 @@
-import { assessEonDay, dailyWeather, dayOperationState, detectHeatingCycles, median, recognizeHeatingSeason, seasonDifference, totalHomeConsumption, trainBaseline, type DayValidation, type HeatingDayFeature, type OperationPeriod, type QuarterHour, type WeatherHour } from "./eon-analysis";
+import { assessEonDay, baselineLookup, dailyWeatherFromGroup, dayOperationState, detectHeatingCycles, groupWeatherByLocalDate, indexQuarterHours, median, recognizeHeatingSeason, seasonDifference, totalHomeConsumption, trainBaseline, type DayValidation, type HeatingDayFeature, type OperationPeriod, type QuarterHour, type WeatherHour } from "./eon-analysis";
 import {addCalendarDays,localDayWindow} from "@/lib/weather/date";
 
 export const HEATING_MODEL_VERSION="eon-heating-v3";
@@ -9,14 +9,13 @@ export const INFORMATION_REASON_CODES=new Set(["MANUAL_HEATING_CONFIRMED"]),CONF
 export function isFeatureExcluded(feature:HeatingDayFeature){if(feature.warnings.some(x=>EXCLUSION_REASON_CODES.has(x)))return true;const unavailableDaily=feature.warnings.some(x=>x==="MISSING_OR_INCOMPLETE_PV"||x==="INCOMPLETE_WEATHER"||x==="POWER_LIMIT_EXCEEDED");return unavailableDaily&&feature.operationState==="available"&&(feature.detectedGridHeatingKwh??0)===0&&!feature.warnings.includes("MANUAL_HEATING_CONFIRMED")}
 
 const sum=(xs:number[])=>xs.reduce((a,b)=>a+b,0);
-const weekend=(date:string,timeZone:string)=>["Sat","Sun"].includes(new Intl.DateTimeFormat("en-US",{timeZone,weekday:"short"}).format(new Date(`${date}T12:00:00Z`)));
-
 export function buildHeatingAnalysis(input:AnalysisInput){
+  const indexedEon=indexQuarterHours(input.eon,input.timeZone),weatherByDate=groupWeatherByLocalDate(input.weather,input.timeZone);
   const byDate=new Map<string,QuarterHour[]>();
-  for(const row of input.eon){if(!row.localDate)continue;byDate.set(row.localDate,[...(byDate.get(row.localDate)??[]),row])}
+  for(const row of indexedEon){if(!row.localDate)continue;const day=byDate.get(row.localDate);if(day)day.push(row);else byDate.set(row.localDate,[row])}
   const ordered=[...byDate].sort(([a],[b])=>a.localeCompare(b));
   const qualities=new Map(ordered.map(([date,rows])=>[date,assessEonDay(date,rows,input.referenceDate,input.timeZone)]));
-  const gridBaseline=trainBaseline(input.eon,input.periods,qualities,input.timeZone);
+  const gridBaseline=trainBaseline(indexedEon,input.periods,qualities,input.timeZone),gridBaselineBySlot=baselineLookup(gridBaseline);
   const pv=new Map(input.pv.map(x=>[x.localDate,x]));
   const validations=new Map(input.validations.map(x=>[x.localDate,x]));
   const raw=ordered.map(([localDate,rows])=>{
@@ -26,13 +25,13 @@ export function buildHeatingAnalysis(input:AnalysisInput){
     const gridImport=sum(rows.map(x=>x.importKwh)),gridExport=sum(rows.map(x=>x.exportKwh));
     const pvDay=pv.get(localDate),completePv=pvDay?.qualityStatus==="complete"?pvDay.energyKwh:null;
     const home=totalHomeConsumption(gridImport,gridExport,completePv);
-    const weather=dailyWeather(localDate,input.weather,input.targetIndoorC,input.timeZone);
-    const cycles=detectHeatingCycles(rows,input.periods,gridBaseline,input.timeZone,validation);
-    const slotBaseline=sum(rows.map(row=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:input.timeZone,hour:"2-digit",minute:"2-digit",weekday:"short",hourCycle:"h23"}).formatToParts(new Date(row.at)),get=(key:string)=>parts.find(x=>x.type===key)?.value??"",slot=Number(get("hour"))*4+Math.floor(Number(get("minute"))/15),isWeekend=["Sat","Sun"].includes(get("weekday"));return gridBaseline.find(x=>x.slot===slot&&x.weekend===isWeekend)?.kwh??0}));
-    return{localDate,rows,quality,operation,validation,gridImport,gridExport,pvDay,home,weather,cycles,slotBaseline};
+    const weather=dailyWeatherFromGroup(localDate,weatherByDate,input.targetIndoorC,input.timeZone);
+    const cycles=detectHeatingCycles(rows,input.periods,gridBaseline,input.timeZone,validation,gridBaselineBySlot);
+    const slotBaseline=sum(rows.map(row=>gridBaselineBySlot.get(`${row.localSlot}:${row.localWeekend}`)??0));
+    return{localDate,rows,quality,operation,validation,gridImport,gridExport,pvDay,home,weather,cycles,slotBaseline,weekend:rows[0]?.localWeekend??false};
   });
   const homeTraining=raw.filter(x=>(x.operation==="definitely_off"||x.validation?.label==="definitely_off")&&x.quality.usableForTraining&&x.pvDay?.qualityStatus==="complete"&&x.home.value!==null&&x.validation?.label!=="definitely_on");
-  const homeBaselines=new Map<boolean,number|null>([false,true].map(group=>[group,median(homeTraining.filter(x=>weekend(x.localDate,input.timeZone)===group).map(x=>x.home.value!))]));
+  const homeBaselines=new Map<boolean,number|null>([false,true].map(group=>[group,median(homeTraining.filter(x=>x.weekend===group).map(x=>x.home.value!))]));
   const globalHomeBaseline=median(homeTraining.map(x=>x.home.value!));
   const coldDates=new Set(raw.filter(x=>x.weather.coveragePercent>=90&&(x.weather.average??99)<16).map(x=>x.localDate));
   const sustainedCold=(date:string)=>coldDates.has(date)&&(coldDates.has(addCalendarDays(date,-1))||coldDates.has(addCalendarDays(date,1)));
@@ -40,7 +39,7 @@ export function buildHeatingAnalysis(input:AnalysisInput){
     const warnings=[...x.quality.warnings,...x.cycles.warnings];
     if(x.home.warning)warnings.push(x.home.warning);if(x.weather.coveragePercent<90)warnings.push("INCOMPLETE_WEATHER");if(x.operation==="mixed")warnings.push("MIXED_OPERATION_DAY");if(x.validation?.label==="uncertain")warnings.push("MANUAL_UNCERTAIN");
     const conflict=x.validation?.label==="definitely_on"&&x.operation==="definitely_off";if(conflict)warnings.push("MANUAL_OPERATION_CONFLICT");const confirmed=x.validation?.label==="definitely_on"&&!conflict;if(confirmed)warnings.push("MANUAL_HEATING_CONFIRMED");
-    const dailyBaseline=homeBaselines.get(weekend(x.localDate,input.timeZone))??globalHomeBaseline;
+    const dailyBaseline=homeBaselines.get(x.weekend)??globalHomeBaseline;
     const dailyExcess=x.home.value===null||dailyBaseline===null?null:x.home.value-dailyBaseline;
     const gridCycleEligible=x.quality.usableForTraining&&gridBaseline.length>0&&!conflict&&x.validation?.label!=="definitely_off";
     const dailyExcessEligible=x.operation==="available"&&!conflict&&x.validation?.label!=="definitely_off"&&x.validation?.label!=="uncertain"&&x.quality.usableForTraining&&x.pvDay?.qualityStatus==="complete"&&x.weather.coveragePercent>=90;
