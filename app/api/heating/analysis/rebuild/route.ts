@@ -5,7 +5,7 @@ import {addCalendarDays,localIsoDate,zonedMidnightUtc} from "@/lib/weather/date"
 import {runHeatingAnalysisRebuild,type HeatingAnalysisRepository,type HeatingSource} from "@/lib/heating/rebuild-service";
 import {HEATING_MODEL_VERSION} from "@/lib/heating/analysis-service";
 import type {WeatherHour} from "@/lib/heating/eon-analysis";
-export const runtime="nodejs";export const maxDuration=60;
+export const runtime="nodejs";export const maxDuration=300;
 const headers={"Cache-Control":"private, no-store, max-age=0, must-revalidate"};type Admin=NonNullable<ReturnType<typeof createAdminClient>>;
 type EonRow={interval_start_utc:string;local_date:string;import_kwh:number|string;export_kwh:number|string};type PvRow={local_date:string;energy_kwh:number|string;quality_status:string};type PeriodRow={enabled_at:string;disabled_at:string|null};type ValidationRow={local_date:string;label:"definitely_on"|"definitely_off"|"uncertain"};type StoredWeatherRow={observed_at:string;quality_status:string};type WeatherRow={observed_at:string;temperature_c:number|string;wind_speed_kmh:number|string|null;shortwave_radiation_wm2:number|string|null;cloud_cover_percent:number|string|null};
 async function pages<T>(load:(from:number)=>PromiseLike<{data:T[]|null;error:unknown}>){const rows:T[]=[];for(let from=0;;from+=1000){const result=await load(from);if(result.error)throw new Error("INPUT_READ_FAILED");rows.push(...(result.data??[]));if(!result.data||result.data.length<1000)return rows}}
