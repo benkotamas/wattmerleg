@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEFAULT_TARIFF_SETTINGS } from "@/lib/config";
 import { createClient } from "@/lib/supabase/client";
 import type { MeterReading, SettlementPeriod, TariffSettings } from "@/lib/types";
+import { readAllMeterReadings, readAllSettlementPeriods } from "@/lib/supabase/paginated-energy";
 
 export function useEnergyData() {
   const [periods, setPeriods] = useState<SettlementPeriod[]>([]);
@@ -17,15 +18,15 @@ export function useEnergyData() {
     setLoading(true); setError(null);
     try {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Bejelentkezés szükséges.");
       const [periodResult, readingResult, tariffResult] = await Promise.all([
-        supabase.from("settlement_periods").select("*").order("start_date", { ascending: true }),
-        supabase.from("meter_readings").select("*").order("reading_at", { ascending: true }),
+        readAllSettlementPeriods((from, to) => supabase.from("settlement_periods").select("*").eq("user_id", user.id).order("start_date", { ascending: true }).order("id", { ascending: true }).range(from, to)),
+        readAllMeterReadings((from, to) => supabase.from("meter_readings").select("*").eq("user_id", user.id).order("reading_at", { ascending: true }).order("id", { ascending: true }).range(from, to)),
         supabase.from("tariff_settings").select("discounted_limit_kwh,discounted_price_ft,market_price_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day").maybeSingle(),
       ]);
-      if (periodResult.error) throw periodResult.error;
-      if (readingResult.error) throw readingResult.error;
-      setPeriods(periodResult.data ?? []);
-      setAllReadings(readingResult.data ?? []);
+      setPeriods(periodResult);
+      setAllReadings(readingResult);
       if (!tariffResult.error && tariffResult.data) {
         setTariff({
           discounted_limit_kwh: Number(tariffResult.data.discounted_limit_kwh),

@@ -4,6 +4,7 @@ import path from "node:path";
 import * as XLSX from "xlsx";
 import { createClient } from "@supabase/supabase-js";
 import { parseWorkbook, type ExcelParseResult } from "../lib/excel-import";
+import { readAllSettlementPeriods } from "../lib/supabase/paginated-energy";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -66,10 +67,14 @@ async function main() {
   let imported = 0;
   let createdPeriods = 0;
   const periodIds = new Map<number, string>();
-  const { data: existingPeriods, error: existingError } = await supabase.from("settlement_periods")
-    .select("start_date").eq("user_id", userId);
-  if (existingError) throw new Error(`A meglévő időszakok nem olvashatók: ${existingError.message}`);
-  const existingStarts = new Set((existingPeriods ?? []).map(period => period.start_date));
+  let existingPeriods;
+  try {
+    existingPeriods = await readAllSettlementPeriods((from, to) => supabase.from("settlement_periods")
+      .select("*").eq("user_id", userId).order("start_date", { ascending: true }).order("id", { ascending: true }).range(from, to));
+  } catch (error) {
+    throw new Error(`A meglévő időszakok nem olvashatók: ${error instanceof Error ? error.message : "adatbázishiba"}`);
+  }
+  const existingStarts = new Set(existingPeriods.map(period => period.start_date));
 
   // A lezárt időszakok kerülnek be először, így az egyetlen nyitott időszak korlátozása is érvényes marad.
   for (const period of result.periods) {
