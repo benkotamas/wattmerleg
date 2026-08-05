@@ -1,0 +1,45 @@
+name: E.ON Gmail hourly sync
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: eon-gmail-hourly-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WATTMERLEG_CRON_URL: ${{ secrets.WATTMERLEG_CRON_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          if [[ -z "${WATTMERLEG_CRON_URL}" ]]; then
+            echo "::error::WATTMERLEG_CRON_URL is not configured."
+            exit 1
+          fi
+          if [[ -z "${CRON_SECRET}" ]]; then
+            echo "::error::CRON_SECRET is not configured."
+            exit 1
+          fi
+
+      - name: Trigger E.ON Gmail sync
+        shell: bash
+        run: |
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --connect-timeout 10 \
+            --max-time 60 \
+            --request GET \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${WATTMERLEG_CRON_URL}"
