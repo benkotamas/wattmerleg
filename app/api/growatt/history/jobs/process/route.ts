@@ -6,6 +6,7 @@ import { syncGrowattHistory, type HistoricalDatabase } from "@/lib/growatt/histo
 import { asGrowattError } from "@/lib/growatt/errors";
 import { localIsoDate } from "@/lib/weather/date";
 import { POST as refreshSnapshots } from "@/app/api/solar/monthly-snapshots/backfill/route";
+import { readGrowattCoverage } from "@/lib/growatt/coverage";
 
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store, max-age=0, must-revalidate" };
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
   if (["completed", "cancelled", "cancelling", "paused", "failed"].includes(job.status)) return NextResponse.json({ job: publicGrowattJob(job as unknown as Record<string, unknown>) }, { headers });
   if (job.retry_after && Date.parse(job.retry_after) > Date.now()) return NextResponse.json({ job: publicGrowattJob(job as unknown as Record<string, unknown>) }, { status: 429, headers: { ...headers, "Retry-After": String(Math.max(1, Math.ceil((Date.parse(job.retry_after) - Date.now()) / 1000))) } });
   const currentLocalDate = localIsoDate(new Date(), "Europe/Budapest");
-  const readCoverage = async () => { const result = await context.client.from("growatt_daily_energy").select("local_date,quality_status,plant_timezone").eq("user_id", context.userId).gte("local_date", job.start_date).lte("local_date", job.end_date); if (result.error) throw new Error("HISTORY_DATABASE_READ_FAILED"); return (result.data ?? []).map(row => ({ localDate: row.local_date, qualityStatus: row.quality_status, plantTimezone: row.plant_timezone })); };
+  const readCoverage = (start=job.start_date,end=job.end_date) => readGrowattCoverage(context.client,context.userId,start,end);
   if (job.status === "finalizing_snapshots") return finalizeSnapshotBatch(request, context.client, job, currentLocalDate, readCoverage);
   let before: Array<JobCoverage & { plantTimezone?: string | null }>; try { before = await readCoverage(); } catch { return fail(503, "HISTORY_DATABASE_READ_FAILED"); }
   const completionSatisfiedBefore = satisfiedCoverageDates(before, currentLocalDate), effectiveCursor = firstUnsettledDate(job.start_date, job.end_date, completionSatisfiedBefore);
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (!finish) return fail(503, "SYNC_CHECKPOINT_WRITE_FAILED"); return NextResponse.json({ job: publicGrowattJob(finish as unknown as Record<string, unknown>) }, { status: 202, headers });
   }
 
-  const database: HistoricalDatabase = { existingCoverage: async (_userId, start, end) => (await readCoverage()).filter(row => row.localDate >= start && row.localDate <= end), upsert: rows => context.client.from("growatt_daily_energy").upsert(rows, { onConflict: "user_id,local_date" }) };
+  const database: HistoricalDatabase = { existingCoverage: async (_userId, start, end) => readCoverage(start,end), upsert: rows => context.client.from("growatt_daily_energy").upsert(rows, { onConflict: "user_id,local_date" }) };
   try {
     const result = await syncGrowattHistory({ userId: context.userId, startDate: chunk.startDate, endDate: chunk.endDate, database, rateLimitRetries: 0 });
     const after = await readCoverage(), satisfied = satisfiedCoverageDates(after, currentLocalDate), firstMissing = firstUnsettledDate(job.start_date, job.end_date, satisfied), blockMissing = firstUnsettledDate(chunk.startDate, chunk.endDate, satisfied), completedDays = satisfied.size;

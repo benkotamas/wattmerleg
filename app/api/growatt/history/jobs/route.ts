@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { growattHistoryRouteContext } from "@/lib/growatt/history-route";
-import { growattJobRange, publicGrowattJob, type GrowattJobSelection, validYearMonth } from "@/lib/growatt/history-jobs";
+import { growattJobRange, publicGrowattJob, satisfiedCoverageDates, type GrowattJobSelection, validYearMonth } from "@/lib/growatt/history-jobs";
 import { localIsoDate } from "@/lib/weather/date";
 import { inclusiveDays } from "@/lib/growatt/historical";
+import { readGrowattCoverage } from "@/lib/growatt/coverage";
 
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store, max-age=0, must-revalidate" };
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
   const existing = await context.client.from("growatt_history_sync_jobs").select("id").eq("user_id", context.userId).in("status", active).limit(1).maybeSingle();
   if (existing.error) return fail(503, "SYNC_JOB_READ_FAILED"); if (existing.data) return fail(409, "SYNC_ALREADY_RUNNING");
   const setting = await context.client.from("growatt_history_sync_settings").upsert({ user_id: context.userId, history_start_month: `${historyStartMonth}-01` }, { onConflict: "user_id" }); if (setting.error) return fail(503, "SYNC_SETTINGS_WRITE_FAILED");
-  const coverage = await context.client.from("growatt_daily_energy").select("local_date,quality_status").eq("user_id", context.userId).gte("local_date", range.startDate).lte("local_date", range.endDate); if (coverage.error) return fail(503, "HISTORY_DATABASE_READ_FAILED");
-  const complete = new Set((coverage.data ?? []).filter(row => row.quality_status === "complete").map(row => row.local_date)).size;
+  let coverage;try{coverage=await readGrowattCoverage(context.client,context.userId,range.startDate,range.endDate)}catch{return fail(503,"HISTORY_DATABASE_READ_FAILED")}
+  const complete = satisfiedCoverageDates(coverage,currentDate).size;
   const created = await context.client.from("growatt_history_sync_jobs").insert({ user_id: context.userId, selection_type: selection, start_date: range.startDate, end_date: range.endDate, cursor_date: range.startDate, status: "queued", total_days: inclusiveDays(range.startDate, range.endDate), completed_days: complete, already_complete_days: complete }).select("*").single();
   if (created.error) return fail(created.error.code === "23505" ? 409 : 503, created.error.code === "23505" ? "SYNC_ALREADY_RUNNING" : "SYNC_JOB_WRITE_FAILED");
   return NextResponse.json({ job: publicGrowattJob(created.data) }, { status: 201, headers });
