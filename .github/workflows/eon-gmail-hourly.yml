@@ -2,7 +2,7 @@ name: E.ON Gmail hourly sync
 
 on:
   schedule:
-    - cron: "30 * * * *"
+    - cron: "45 * * * *"
   workflow_dispatch:
 
 permissions: {}
