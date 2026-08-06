@@ -18,6 +18,7 @@ const CENTRAL_SIGNATURE = 0x02014b50;
 const LOCAL_SIGNATURE = 0x04034b50;
 const ZIP64_EXTRA_FIELD = 0x0001;
 const DATA_DESCRIPTOR_FLAG = 1 << 3;
+const DATA_DESCRIPTOR_SIGNATURE = 0x08074b50;
 
 type EntryRange = { start: number; end: number };
 type ArchiveLimits = { maxEntryBytes?: number; maxTotalBytes?: number; maxRatio?: number };
@@ -85,6 +86,38 @@ function overlaps(existing: EntryRange[], candidate: EntryRange): boolean {
   return existing.some(range => candidate.start < range.end && range.start < candidate.end);
 }
 
+function dataDescriptorEnd(
+  bytes: Buffer,
+  start: number,
+  limit: number,
+  crc: number,
+  compressed: number,
+  uncompressed: number,
+): number {
+  const signedEnd = start + 16;
+  if (
+    signedEnd <= limit &&
+    bytes.readUInt32LE(start) === DATA_DESCRIPTOR_SIGNATURE &&
+    bytes.readUInt32LE(start + 4) === crc &&
+    bytes.readUInt32LE(start + 8) === compressed &&
+    bytes.readUInt32LE(start + 12) === uncompressed
+  ) {
+    return signedEnd;
+  }
+
+  const unsignedEnd = start + 12;
+  if (
+    unsignedEnd <= limit &&
+    bytes.readUInt32LE(start) === crc &&
+    bytes.readUInt32LE(start + 4) === compressed &&
+    bytes.readUInt32LE(start + 8) === uncompressed
+  ) {
+    return unsignedEnd;
+  }
+
+  unsafe();
+}
+
 export function inspectXlsxArchive(bytes: Buffer, limits: ArchiveLimits = {}): void {
   const maxEntryBytes = limits.maxEntryBytes ?? EON_MAX_ZIP_ENTRY_BYTES;
   const maxTotalBytes = limits.maxTotalBytes ?? EON_MAX_UNCOMPRESSED_BYTES;
@@ -140,7 +173,7 @@ export function inspectXlsxArchive(bytes: Buffer, limits: ArchiveLimits = {}): v
     if (diskStart !== 0) unsafe();
     if (compressed === 0xffffffff || uncompressed === 0xffffffff || localOffset === 0xffffffff) unsafe();
     if (method !== 0 && method !== 8) unsafe();
-    if ((flags & 1) !== 0 || (flags & DATA_DESCRIPTOR_FLAG) !== 0) unsafe();
+    if ((flags & 1) !== 0) unsafe();
     if (hasZip64Extra(bytes, offset + 46 + nameLength, extraLength)) unsafe();
 
     const centralNameBytes = bytes.subarray(offset + 46, offset + 46 + nameLength);
@@ -162,16 +195,22 @@ export function inspectXlsxArchive(bytes: Buffer, limits: ArchiveLimits = {}): v
     if (hasZip64Extra(bytes, localOffset + 30 + localNameLength, localExtraLength)) unsafe();
     const localNameBytes = bytes.subarray(localOffset + 30, localOffset + 30 + localNameLength);
     if (!centralNameBytes.equals(localNameBytes)) unsafe();
-    if (
-      localMethod !== method ||
-      localFlags !== flags ||
-      localCrc !== crc ||
-      localCompressed !== compressed ||
-      localUncompressed !== uncompressed
-    ) unsafe();
+    if (localMethod !== method || localFlags !== flags) unsafe();
+    const usesDataDescriptor = (flags & DATA_DESCRIPTOR_FLAG) !== 0;
+    if (usesDataDescriptor) {
+      const localValuesAreEmpty = localCrc === 0 && localCompressed === 0 && localUncompressed === 0;
+      const localValuesMatch =
+        localCrc === crc && localCompressed === compressed && localUncompressed === uncompressed;
+      if (!localValuesAreEmpty && !localValuesMatch) unsafe();
+    } else if (localCrc !== crc || localCompressed !== compressed || localUncompressed !== uncompressed) {
+      unsafe();
+    }
     const dataEnd = localHeaderEnd + compressed;
     if (dataEnd > centralOffset || dataEnd < localHeaderEnd) unsafe();
-    const range = { start: localOffset, end: dataEnd };
+    const entryEnd = usesDataDescriptor
+      ? dataDescriptorEnd(bytes, dataEnd, centralOffset, crc, compressed, uncompressed)
+      : dataEnd;
+    const range = { start: localOffset, end: entryEnd };
     if (overlaps(localRanges, range)) unsafe();
     localRanges.push(range);
 

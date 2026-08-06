@@ -27,17 +27,21 @@ type FixtureEntry = {
   crc?: number;
   centralExtra?: Buffer;
   localExtra?: Buffer;
+  dataDescriptor?: "signed" | "unsigned";
+  localHeaderValues?: "zero" | "central";
 };
 type ZipFixture = {
   bytes: Buffer;
   centralOffsets: number[];
   localOffsets: number[];
+  descriptorOffsets: Array<number | null>;
   eocdOffset: number;
 };
 
 function zipFixture(entries: FixtureEntry[]): ZipFixture {
   const localParts: Buffer[] = [];
   const localOffsets: number[] = [];
+  const descriptorOffsets: Array<number | null> = [];
   let localLength = 0;
   for (const entry of entries) {
     const name = Buffer.from(entry.name);
@@ -45,19 +49,39 @@ function zipFixture(entries: FixtureEntry[]): ZipFixture {
     const compressed = entry.compressed ?? data.length;
     const uncompressed = entry.uncompressed ?? compressed;
     const extra = entry.localExtra ?? Buffer.alloc(0);
+    const flags = (entry.flags ?? 0) | (entry.dataDescriptor ? 8 : 0);
     const header = Buffer.alloc(30);
     header.writeUInt32LE(0x04034b50, 0);
-    header.writeUInt16LE(entry.flags ?? 0, 6);
+    header.writeUInt16LE(flags, 6);
     header.writeUInt16LE(entry.method ?? 0, 8);
     const checksum = entry.crc ?? (entry.method === 8 ? 0 : crc32(data.subarray(0, compressed)));
-    header.writeUInt32LE(checksum, 14);
-    header.writeUInt32LE(compressed, 18);
-    header.writeUInt32LE(uncompressed, 22);
+    if (!entry.dataDescriptor || entry.localHeaderValues === "central") {
+      header.writeUInt32LE(checksum, 14);
+      header.writeUInt32LE(compressed, 18);
+      header.writeUInt32LE(uncompressed, 22);
+    }
     header.writeUInt16LE(name.length, 26);
     header.writeUInt16LE(extra.length, 28);
     localOffsets.push(localLength);
-    localParts.push(header, name, extra, data.subarray(0, compressed));
+    const payload = data.subarray(0, compressed);
+    localParts.push(header, name, extra, payload);
     localLength += 30 + name.length + extra.length + compressed;
+    if (entry.dataDescriptor) {
+      descriptorOffsets.push(localLength);
+      const descriptor = Buffer.alloc(entry.dataDescriptor === "signed" ? 16 : 12);
+      let descriptorOffset = 0;
+      if (entry.dataDescriptor === "signed") {
+        descriptor.writeUInt32LE(0x08074b50, 0);
+        descriptorOffset = 4;
+      }
+      descriptor.writeUInt32LE(checksum, descriptorOffset);
+      descriptor.writeUInt32LE(compressed, descriptorOffset + 4);
+      descriptor.writeUInt32LE(uncompressed, descriptorOffset + 8);
+      localParts.push(descriptor);
+      localLength += descriptor.length;
+    } else {
+      descriptorOffsets.push(null);
+    }
   }
   const centralParts: Buffer[] = [];
   const centralOffsets: number[] = [];
@@ -68,9 +92,10 @@ function zipFixture(entries: FixtureEntry[]): ZipFixture {
     const compressed = entry.compressed ?? data.length;
     const uncompressed = entry.uncompressed ?? compressed;
     const extra = entry.centralExtra ?? Buffer.alloc(0);
+    const flags = (entry.flags ?? 0) | (entry.dataDescriptor ? 8 : 0);
     const header = Buffer.alloc(46);
     header.writeUInt32LE(0x02014b50, 0);
-    header.writeUInt16LE(entry.flags ?? 0, 8);
+    header.writeUInt16LE(flags, 8);
     header.writeUInt16LE(entry.method ?? 0, 10);
     const checksum = entry.crc ?? (entry.method === 8 ? 0 : crc32(data.subarray(0, compressed)));
     header.writeUInt32LE(checksum, 16);
@@ -89,7 +114,13 @@ function zipFixture(entries: FixtureEntry[]): ZipFixture {
   eocd.writeUInt16LE(entries.length, 10);
   eocd.writeUInt32LE(centralLength, 12);
   eocd.writeUInt32LE(localLength, 16);
-  return { bytes: Buffer.concat([...localParts, ...centralParts, eocd]), centralOffsets, localOffsets, eocdOffset: localLength + centralLength };
+  return {
+    bytes: Buffer.concat([...localParts, ...centralParts, eocd]),
+    centralOffsets,
+    localOffsets,
+    descriptorOffsets,
+    eocdOffset: localLength + centralLength,
+  };
 }
 
 function workbook(configure: (wb: XLSX.WorkBook, ws: XLSX.WorkSheet) => void): Buffer {
@@ -193,13 +224,66 @@ describe("E.ON XLSX central/local ZIP-határ", () => {
     assertUnsafe(fixture.bytes);
   });
 
-  it("data descriptor flaget central vagy local oldalon tilt", () => {
-    const central = zipFixture([{ name: "a" }]);
-    central.bytes.writeUInt16LE(8, central.centralOffsets[0] + 8);
-    assertUnsafe(central.bytes);
-    const local = zipFixture([{ name: "a" }]);
-    local.bytes.writeUInt16LE(8, local.localOffsets[0] + 6);
-    assertUnsafe(local.bytes);
+  it("szignatúrás és szignatúra nélküli data descriptort biztonságosan elfogad", () => {
+    const data = Buffer.from("descriptor-payload");
+    for (const dataDescriptor of ["signed", "unsigned"] as const) {
+      const fixture = zipFixture([{
+        name: "xl/workbook.xml",
+        data,
+        flags: 0x0800,
+        dataDescriptor,
+      }]);
+      expect(() => inspectXlsxArchive(fixture.bytes)).not.toThrow();
+    }
+  });
+
+  it("data descriptor mellett a local headerben a central értékek is elfogadhatók", () => {
+    const fixture = zipFixture([{
+      name: "xl/workbook.xml",
+      data: Buffer.from("payload"),
+      dataDescriptor: "signed",
+      localHeaderValues: "central",
+    }]);
+    expect(() => inspectXlsxArchive(fixture.bytes)).not.toThrow();
+  });
+
+  it("data descriptor central/local flageltérést és részleges local értékeket tilt", () => {
+    const flagMismatch = zipFixture([{ name: "a", dataDescriptor: "signed" }]);
+    flagMismatch.bytes.writeUInt16LE(0, flagMismatch.localOffsets[0] + 6);
+    assertUnsafe(flagMismatch.bytes);
+
+    const partialLocalValues = zipFixture([{ name: "a", dataDescriptor: "signed" }]);
+    partialLocalValues.bytes.writeUInt32LE(1, partialLocalValues.localOffsets[0] + 18);
+    assertUnsafe(partialLocalValues.bytes);
+  });
+
+  it("hibás data descriptor CRC-t és méreteket tilt", () => {
+    const mutations: Array<(bytes: Buffer, descriptorOffset: number) => void> = [
+      (bytes, descriptorOffset) => bytes.writeUInt32LE(123, descriptorOffset + 4),
+      (bytes, descriptorOffset) => bytes.writeUInt32LE(123, descriptorOffset + 8),
+      (bytes, descriptorOffset) => bytes.writeUInt32LE(123, descriptorOffset + 12),
+    ];
+    for (const mutate of mutations) {
+      const fixture = zipFixture([{ name: "a", data: Buffer.from("payload"), dataDescriptor: "signed" }]);
+      const descriptorOffset = fixture.descriptorOffsets[0];
+      expect(descriptorOffset).not.toBeNull();
+      mutate(fixture.bytes, descriptorOffset!);
+      assertUnsafe(fixture.bytes);
+    }
+  });
+
+  it("csonkolt vagy central directoryba nyúló data descriptort tilt", () => {
+    const fixture = zipFixture([{ name: "a", data: Buffer.from("payload"), dataDescriptor: "signed" }]);
+    const descriptorOffset = fixture.descriptorOffsets[0]!;
+    const removedBytes = 8;
+    const truncated = Buffer.concat([
+      fixture.bytes.subarray(0, descriptorOffset + 8),
+      fixture.bytes.subarray(descriptorOffset + 8 + removedBytes),
+    ]);
+    const newEocdOffset = fixture.eocdOffset - removedBytes;
+    const oldCentralOffset = fixture.bytes.readUInt32LE(fixture.eocdOffset + 16);
+    truncated.writeUInt32LE(oldCentralOffset - removedBytes, newEocdOffset + 16);
+    assertUnsafe(truncated);
   });
 
   it("ZIP64 extra mezőt central és local headerben is tilt", () => {
