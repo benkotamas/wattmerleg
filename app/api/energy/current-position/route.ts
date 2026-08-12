@@ -28,7 +28,7 @@ export async function GET() {
   const auth = await eonImportContext();
   if (auth.access !== "allowed") return accessFail(auth.access);
 
-  const periodResult = await auth.client.from("settlement_periods").select("id").eq("user_id", auth.userId).eq("status", "open").order("start_date", { ascending: false }).limit(1).maybeSingle();
+  const periodResult = await auth.client.from("settlement_periods").select("id,start_date").eq("user_id", auth.userId).eq("status", "open").order("start_date", { ascending: false }).limit(1).maybeSingle();
   if (periodResult.error) return unavailable();
   if (!periodResult.data) return NextResponse.json({ position: null }, { headers: noStore });
 
@@ -43,7 +43,7 @@ export async function GET() {
 
   try {
     const position = buildCurrentFinancialPosition({
-      settlementPeriodId: String(periodResult.data.id), overview,
+      settlementPeriodId: String(periodResult.data.id), billingPeriodStart: String(periodResult.data.start_date), overview,
       tariff: databaseTariff ?? DEFAULT_TARIFF_SETTINGS,
       tariffSource: databaseTariff ? "database" : "fallback",
     });

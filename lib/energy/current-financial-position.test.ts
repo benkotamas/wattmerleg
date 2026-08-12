@@ -20,6 +20,13 @@ describe("current financial position", () => {
     expect(result.source).toBe("eon_intervals");
     expect(result).not.toHaveProperty("growattProductionKwh");
   });
+  it("az aktuális díj keretét a hivatalos settlement start_date alapján számolja", () => {
+    const source = overview({ periodStartAt: "2025-08-07T16:00:00+02:00", lastDataAt: "2026-08-07T12:00:00+02:00", gridImportKwh: 15_904, gridExportKwh: 7_900 });
+    const result = buildCurrentFinancialPosition({ settlementPeriodId: "period-1", billingPeriodStart: "2025-09-12", overview: source, tariff: DEFAULT_TARIFF_SETTINGS, tariffSource: "database" })!;
+    expect(result.amountBreakdown.billingDays).toBe(330);
+    expect(result.amountBreakdown.discountedQuantityKwh).toBeCloseTo(2_280.3);
+    expect(Math.round(result.estimatedAmountFt)).toBe(485_480);
+  });
   it("payable, credit és epsilonon belül balanced irányt ad", () => {
     expect(financialDirection(1)).toBe("payable");
     expect(financialDirection(-1)).toBe("credit");

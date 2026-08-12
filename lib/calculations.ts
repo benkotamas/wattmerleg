@@ -101,7 +101,8 @@ export function periodSummary(
   const days = Math.max(elapsedDays(periodStartDate(period, readings), referenceDate), 1);
   const dailyConsumption = consumption / days;
   const dailyProduction = production / days;
-  const amountBreakdown = billingAmountBreakdown(balance, periodStartDate(period, readings), referenceDate, tariff);
+  const billingEnd = period.status === "closed" && period.end_date ? period.end_date : referenceDate;
+  const amountBreakdown = billingAmountBreakdown(balance, period.start_date, billingEnd, tariff);
   return {
     consumption, production, balance, estimatedAmount: amountBreakdown.totalFt, amountBreakdown, elapsedDays: days,
     dailyConsumption, dailyProduction,
@@ -155,7 +156,7 @@ export function annualForecast(
     projectedAnnualConsumption,
     projectedAnnualProduction,
     projectedBalance,
-    projectedAmount: estimateAmount(projectedBalance, effectiveStart, closingDate, tariff),
+    projectedAmount: estimateAmount(projectedBalance, period.start_date, closingDate, tariff),
   };
 }
 

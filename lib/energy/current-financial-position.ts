@@ -64,11 +64,12 @@ export function currentFinancialConfidence(
 
 export function buildCurrentFinancialPosition(args: {
   settlementPeriodId: string;
+  billingPeriodStart?: string;
   overview: EonPeriodOverview | null;
   tariff: TariffSettings;
   tariffSource: TariffSource;
 }): CurrentFinancialPosition | null {
-  const { settlementPeriodId, overview, tariff, tariffSource } = args;
+  const { settlementPeriodId, billingPeriodStart, overview, tariff, tariffSource } = args;
   if (!overview) return null;
   validateFinancialOverview(overview);
   if (overview.availableIntervals === 0 || !overview.lastDataAt) return null;
@@ -76,7 +77,7 @@ export function buildCurrentFinancialPosition(args: {
 
   const netGridKwh = overview.gridImportKwh - overview.gridExportKwh;
   if (!Number.isFinite(netGridKwh)) throw new Error("INVALID_NET_GRID");
-  const amountBreakdown = billingAmountBreakdown(netGridKwh, overview.periodStartAt, overview.lastDataAt, tariff);
+  const amountBreakdown = billingAmountBreakdown(netGridKwh, billingPeriodStart ?? overview.periodStartAt, overview.lastDataAt, tariff);
   const estimatedAmountFt = amountBreakdown.totalFt;
   if (!Number.isFinite(estimatedAmountFt)) throw new Error("INVALID_ESTIMATED_AMOUNT");
   const warnings = new Set(overview.warnings);

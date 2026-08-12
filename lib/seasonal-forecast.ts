@@ -169,7 +169,7 @@ export function seasonalAnnualForecast(
   const confidences = months.filter(month => month.expectedConsumption !== null).map(month => month.confidence);
   const confidence: ForecastConfidence = confidences.includes("low") ? "low" : confidences.includes("medium") ? "medium" : "high";
   const historicalYears = new Set(historical.map(reading => new Date(reading.reading_at).getFullYear())).size;
-  return { months, consumption, production, balance: consumption - production, estimatedAmount: estimateAmount(consumption - production, start, closing, tariff), confidence, productionReliable: months.every(month => month.expectedProduction === null || month.productionReliable), historicalYears };
+  return { months, consumption, production, balance: consumption - production, estimatedAmount: estimateAmount(consumption - production, period.start_date, closing, tariff), confidence, productionReliable: months.every(month => month.expectedProduction === null || month.productionReliable), historicalYears };
 }
 
 export function maxConfigurableDay(month: number): number {

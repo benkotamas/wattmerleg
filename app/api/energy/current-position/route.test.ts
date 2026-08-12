@@ -18,7 +18,7 @@ describe("GET /api/energy/current-position", () => {
   let periodQuery: ReturnType<typeof query>, tariffQuery: ReturnType<typeof query>;
   beforeEach(() => {
     state.access = "allowed"; state.from.mockReset(); state.rpc.mockReset();
-    periodQuery = query({ data: { id: "period-1" }, error: null });
+    periodQuery = query({ data: { id: "period-1", start_date: "2026-08-04" }, error: null });
     tariffQuery = query({ data: tariff, error: null });
     state.from.mockImplementation((table: string) => table === "settlement_periods" ? periodQuery : tariffQuery);
     state.rpc.mockResolvedValue({ data: eonOverview, error: null });
@@ -29,7 +29,7 @@ describe("GET /api/energy/current-position", () => {
   it("explicit owner filterrel biztonságos DTO-t ad", async () => {
     const response = await GET(), body = await response.json();
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toContain("no-store");
-    expect(periodQuery.eq).toHaveBeenCalledWith("user_id", "owner"); expect(tariffQuery.eq).toHaveBeenCalledWith("user_id", "owner");
+    expect(periodQuery.eq).toHaveBeenCalledWith("user_id", "owner"); expect(periodQuery.select).toHaveBeenCalledWith("id,start_date"); expect(tariffQuery.eq).toHaveBeenCalledWith("user_id", "owner");
     expect(body.position).toMatchObject({ source: "eon_intervals", gridImportKwh: 100, gridExportKwh: 20, tariffSource: "database" });
     expect(JSON.stringify(body)).not.toContain("must-not-leak");
     expect(state.from.mock.calls.map(([table]) => table)).not.toEqual(expect.arrayContaining(["meter_readings", "growatt_daily_energy"]));
@@ -40,7 +40,7 @@ describe("GET /api/energy/current-position", () => {
   });
   it("nyitott időszak vagy E.ON-adat hiányában null", async () => {
     periodQuery.maybeSingle.mockResolvedValue({ data: null, error: null }); expect(await (await GET()).json()).toEqual({ position: null });
-    periodQuery.maybeSingle.mockResolvedValue({ data: { id: "period-1" }, error: null }); state.rpc.mockResolvedValue({ data: null, error: null }); expect(await (await GET()).json()).toEqual({ position: null });
+    periodQuery.maybeSingle.mockResolvedValue({ data: { id: "period-1", start_date: "2026-08-04" }, error: null }); state.rpc.mockResolvedValue({ data: null, error: null }); expect(await (await GET()).json()).toEqual({ position: null });
   });
   it.each([
     ["hiányzó mező", { gridImportKwh: undefined }],

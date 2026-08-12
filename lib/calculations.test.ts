@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annualForecast, billingAmountBreakdown, comparePeriodsAtSameElapsedTime, elapsedDays, estimateAmount, nextClosingDate, readingDelta } from "./calculations";
+import { annualForecast, billingAmountBreakdown, comparePeriodsAtSameElapsedTime, elapsedDays, estimateAmount, nextClosingDate, periodSummary, readingDelta } from "./calculations";
 import type { MeterReading, SettlementPeriod, TariffSettings } from "./types";
 import { DEFAULT_TARIFF_SETTINGS } from "./config";
 
@@ -95,6 +95,19 @@ describe("energy calculations", () => {
     expect(forecast.consumption).toBe(100);
     expect(forecast.production).toBe(30);
     expect(forecast.estimatedAmount).toBeCloseTo(126.18);
+  });
+
+  it("a szolgáltatói díjat a hivatalos start_date alapján számolja, nem a korábbi nyitó mérésből", () => {
+    const closed: SettlementPeriod = {
+      id: "mvm-period", start_date: "2025-09-12", opening_reading_at: "2025-08-07T16:00:00+02:00",
+      end_date: "2026-08-07", opening_consumption_meter_kwh: 0, opening_production_meter_kwh: 0,
+      closing_consumption_meter_kwh: 15_904, closing_production_meter_kwh: 7_900, status: "closed", created_at: "2025-09-12T00:00:00Z",
+    };
+    const summary = periodSummary(closed, [], DEFAULT_TARIFF_SETTINGS);
+    expect(summary.balance).toBe(8_004);
+    expect(summary.amountBreakdown.billingDays).toBe(330);
+    expect(summary.amountBreakdown.discountedQuantityKwh).toBeCloseTo(2_280.3);
+    expect(Math.round(summary.estimatedAmount)).toBe(485_480);
   });
 
   it("augusztus 1-jén bontja a kedvezményes évet és kezeli a szökőévet", () => {
