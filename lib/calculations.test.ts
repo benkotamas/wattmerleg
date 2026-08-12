@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { annualForecast, comparePeriodsAtSameElapsedTime, elapsedDays, estimateAmount, nextClosingDate, readingDelta } from "./calculations";
+import { annualForecast, billingAmountBreakdown, comparePeriodsAtSameElapsedTime, elapsedDays, estimateAmount, nextClosingDate, readingDelta } from "./calculations";
 import type { MeterReading, SettlementPeriod, TariffSettings } from "./types";
+import { DEFAULT_TARIFF_SETTINGS } from "./config";
 
 const reading = (at: string, consumption: number, production: number): MeterReading => ({
   id: at,
@@ -24,6 +25,7 @@ const period = (id: string, start: string, status: "open" | "closed" = "open"): 
 
 const customTariff: TariffSettings = {
   discounted_limit_kwh: 10, discounted_price_ft: 1, market_price_ft: 2,
+  monthly_base_fee_ft: 0,
   feed_in_price_ft: 3, annual_closing_month: 8, annual_closing_day: 4,
   heating_season_start_month: 10, heating_season_start_day: 1,
   heating_season_end_month: 4, heating_season_end_day: 30,
@@ -41,12 +43,15 @@ describe("energy calculations", () => {
     )).toEqual({ consumption: 15, production: 7, balance: 8, elapsedDays: 2 });
   });
 
-  it("uses both positive price tiers", () => {
-    expect(estimateAmount(3000)).toBeCloseTo(2523 * 36 + 477 * 70.1);
+  it("az MVM lezárt időszaki példáját pontosan számolja", () => {
+    const result = billingAmountBreakdown(8004, "2025-09-12", "2026-08-07", DEFAULT_TARIFF_SETTINGS);
+    expect(result.billingDays).toBe(330);
+    expect(result.discountedQuantityKwh).toBeCloseTo(2280.3);
+    expect(Math.round(result.totalFt)).toBe(485_480);
   });
 
   it("shows production surplus as negative credit", () => {
-    expect(estimateAmount(-100)).toBe(-500);
+    expect(estimateAmount(-100, "2025-09-12", "2026-08-07")).toBe(-500);
   });
 
   it("returns the next August 4 closing", () => {
@@ -54,8 +59,8 @@ describe("energy calculations", () => {
   });
 
   it("uses tariff values received from the database", () => {
-    expect(estimateAmount(15, customTariff)).toBe(20);
-    expect(estimateAmount(-4, customTariff)).toBe(-12);
+    expect(estimateAmount(15, "2025-08-01", "2026-07-31", customTariff)).toBe(20);
+    expect(estimateAmount(-4, "2025-08-01", "2026-07-31", customTariff)).toBe(-12);
   });
 
   it("projects the year from the latest actual reading, not the system clock", () => {
@@ -66,7 +71,7 @@ describe("energy calculations", () => {
     expect(forecast.elapsedDays).toBeCloseTo(100);
     expect(forecast.projectedAnnualConsumption).toBeCloseTo(1000 * forecast.totalPeriodDays / 100);
     expect(forecast.projectedBalance).toBeCloseTo(forecast.projectedAnnualConsumption - forecast.projectedAnnualProduction);
-    expect(forecast.projectedAmount).toBe(estimateAmount(forecast.projectedBalance, customTariff));
+    expect(forecast.projectedAmount).toBe(estimateAmount(forecast.projectedBalance, start, forecast.closingDate, customTariff));
   });
 
   it("compares the current period with the same elapsed point of the previous period", () => {
@@ -89,6 +94,23 @@ describe("energy calculations", () => {
     expect(forecast.elapsedDays).toBe(1);
     expect(forecast.consumption).toBe(100);
     expect(forecast.production).toBe(30);
-    expect(forecast.estimatedAmount).toBe(130);
+    expect(forecast.estimatedAmount).toBeCloseTo(126.18);
+  });
+
+  it("augusztus 1-jén bontja a kedvezményes évet és kezeli a szökőévet", () => {
+    const result = billingAmountBreakdown(100, "2023-07-31", "2023-08-02", { ...DEFAULT_TARIFF_SETTINGS, monthly_base_fee_ft: 0 });
+    expect(result.billingDays).toBe(3);
+    expect(result.discountedQuantityKwh).toBeCloseTo(6.91 + 2 * 6.89);
+  });
+
+  it("az alapdíjat a számlázási napokra arányosítja", () => {
+    const result = billingAmountBreakdown(0, "2025-09-12", "2026-08-07", DEFAULT_TARIFF_SETTINGS);
+    expect(result.baseFeeFt).toBeCloseTo(153.035 * 12 / 365 * 330);
+    expect(result.totalFt).toBe(result.baseFeeFt);
+  });
+
+  it("érvénytelen időszakot fail-closed módon elutasít", () => {
+    expect(() => billingAmountBreakdown(100, "hibás", "2026-08-07")).toThrow("INVALID_BILLING_PERIOD");
+    expect(() => billingAmountBreakdown(100, "2026-08-08", "2026-08-07")).toThrow("INVALID_BILLING_PERIOD");
   });
 });

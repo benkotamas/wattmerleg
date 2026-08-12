@@ -23,7 +23,7 @@ export function useEnergyData() {
       const [periodResult, readingResult, tariffResult] = await Promise.all([
         readAllSettlementPeriods((from, to) => supabase.from("settlement_periods").select("*").eq("user_id", user.id).order("start_date", { ascending: true }).order("id", { ascending: true }).range(from, to)),
         readAllMeterReadings((from, to) => supabase.from("meter_readings").select("*").eq("user_id", user.id).order("reading_at", { ascending: true }).order("id", { ascending: true }).range(from, to)),
-        supabase.from("tariff_settings").select("discounted_limit_kwh,discounted_price_ft,market_price_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day").maybeSingle(),
+        supabase.from("tariff_settings").select("discounted_limit_kwh,discounted_price_ft,market_price_ft,monthly_base_fee_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day").maybeSingle(),
       ]);
       setPeriods(periodResult);
       setAllReadings(readingResult);
@@ -32,6 +32,7 @@ export function useEnergyData() {
           discounted_limit_kwh: Number(tariffResult.data.discounted_limit_kwh),
           discounted_price_ft: Number(tariffResult.data.discounted_price_ft),
           market_price_ft: Number(tariffResult.data.market_price_ft),
+          monthly_base_fee_ft: Number(tariffResult.data.monthly_base_fee_ft),
           feed_in_price_ft: Number(tariffResult.data.feed_in_price_ft),
           annual_closing_month: tariffResult.data.annual_closing_month,
           annual_closing_day: tariffResult.data.annual_closing_day,

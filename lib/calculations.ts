@@ -1,7 +1,7 @@
 import { DEFAULT_TARIFF_SETTINGS } from "@/lib/config";
 import type {
   AnnualForecast, MeterReading, PeriodComparison, PeriodSummary,
-  ReadingDelta, SettlementPeriod, TariffSettings,
+  ReadingDelta, SettlementPeriod, TariffSettings, BillingAmountBreakdown,
 } from "@/lib/types";
 
 const DAY_MS = 86_400_000;
@@ -17,14 +17,59 @@ export function readingDelta(previous: MeterReading, current: MeterReading): Rea
   return { consumption, production, balance: consumption - production, elapsedDays: elapsedDays(previous.reading_at, current.reading_at) };
 }
 
-export function estimateAmount(
+const BILLING_TIME_ZONE = "Europe/Budapest";
+const dateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: BILLING_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" });
+const toBillingDate = (value: string | Date) => {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? dateFormatter.format(date) : "";
+};
+const utcDay = (value: string) => Date.parse(`${value}T00:00:00Z`);
+const isoDay = (value: number) => new Date(value).toISOString().slice(0, 10);
+const isLeapYear = (year: number) => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+
+function discountYear(date: string) {
+  const year = Number(date.slice(0, 4));
+  const startsThisYear = date.slice(5) >= "08-01";
+  const startYear = startsThisYear ? year : year - 1;
+  const days = isLeapYear(startYear + 1) ? 366 : 365;
+  return { start: `${startYear}-08-01`, end: `${startYear + 1}-07-31`, days };
+}
+
+export function billingAmountBreakdown(
   balanceKwh: number,
+  periodStart: string | Date,
+  periodEnd: string | Date,
   tariff: TariffSettings = DEFAULT_TARIFF_SETTINGS,
-): number {
-  if (balanceKwh < 0) return balanceKwh * tariff.feed_in_price_ft;
-  const discounted = Math.min(balanceKwh, tariff.discounted_limit_kwh);
-  const market = Math.max(balanceKwh - tariff.discounted_limit_kwh, 0);
-  return discounted * tariff.discounted_price_ft + market * tariff.market_price_ft;
+): BillingAmountBreakdown {
+  const start = toBillingDate(periodStart), end = toBillingDate(periodEnd);
+  const startTime = utcDay(start), endTime = utcDay(end);
+  const tariffValues = [tariff.discounted_limit_kwh, tariff.discounted_price_ft, tariff.market_price_ft, tariff.monthly_base_fee_ft, tariff.feed_in_price_ft];
+  if (!Number.isFinite(balanceKwh) || !Number.isFinite(startTime) || !Number.isFinite(endTime) || startTime > endTime || tariffValues.some(value => !Number.isFinite(value) || value < 0)) throw new Error("INVALID_BILLING_PERIOD");
+  if (balanceKwh < 0) {
+    const credit = balanceKwh * tariff.feed_in_price_ft;
+    return { billingDays: Math.floor((utcDay(end) - utcDay(start)) / DAY_MS) + 1, discountedQuantityKwh: 0, discountedFeeFt: 0, marketQuantityKwh: 0, marketFeeFt: 0, baseFeeFt: 0, feedInCreditFt: credit, totalFt: credit };
+  }
+  let cursor = start, allowance = 0, baseFeeFt = 0, billingDays = 0;
+  while (utcDay(cursor) <= utcDay(end)) {
+    const year = discountYear(cursor);
+    const segmentEnd = utcDay(year.end) < utcDay(end) ? year.end : end;
+    const days = Math.floor((utcDay(segmentEnd) - utcDay(cursor)) / DAY_MS) + 1;
+    const fullYear = cursor === year.start && segmentEnd === year.end;
+    allowance += fullYear ? tariff.discounted_limit_kwh : days * (year.days === 366 ? 6.89 : 6.91);
+    baseFeeFt += tariff.monthly_base_fee_ft * 12 / year.days * days;
+    billingDays += days;
+    cursor = isoDay(utcDay(segmentEnd) + DAY_MS);
+  }
+  const discountedQuantityKwh = Math.min(balanceKwh, allowance);
+  const marketQuantityKwh = Math.max(balanceKwh - discountedQuantityKwh, 0);
+  const discountedFeeFt = discountedQuantityKwh * tariff.discounted_price_ft;
+  const marketFeeFt = marketQuantityKwh * tariff.market_price_ft;
+  return { billingDays, discountedQuantityKwh, discountedFeeFt, marketQuantityKwh, marketFeeFt, baseFeeFt, feedInCreditFt: 0, totalFt: discountedFeeFt + marketFeeFt + baseFeeFt };
+}
+
+export function estimateAmount(balanceKwh: number, periodStart: string | Date, periodEnd: string | Date, tariff: TariffSettings = DEFAULT_TARIFF_SETTINGS): number {
+  return billingAmountBreakdown(balanceKwh, periodStart, periodEnd, tariff).totalFt;
 }
 
 function latestReading(readings: MeterReading[]): MeterReading | undefined {
@@ -56,8 +101,9 @@ export function periodSummary(
   const days = Math.max(elapsedDays(periodStartDate(period, readings), referenceDate), 1);
   const dailyConsumption = consumption / days;
   const dailyProduction = production / days;
+  const amountBreakdown = billingAmountBreakdown(balance, periodStartDate(period, readings), referenceDate, tariff);
   return {
-    consumption, production, balance, estimatedAmount: estimateAmount(balance, tariff), elapsedDays: days,
+    consumption, production, balance, estimatedAmount: amountBreakdown.totalFt, amountBreakdown, elapsedDays: days,
     dailyConsumption, dailyProduction,
     projectedAnnualConsumption: dailyConsumption * 365,
     projectedAnnualProduction: dailyProduction * 365,
@@ -109,7 +155,7 @@ export function annualForecast(
     projectedAnnualConsumption,
     projectedAnnualProduction,
     projectedBalance,
-    projectedAmount: estimateAmount(projectedBalance, tariff),
+    projectedAmount: estimateAmount(projectedBalance, effectiveStart, closingDate, tariff),
   };
 }
 

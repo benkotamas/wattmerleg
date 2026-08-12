@@ -14,7 +14,7 @@ import { GrowattPvHistorySection } from "@/components/growatt/pv-history-section
 import { SolarConsumptionAnalysisSection } from "@/components/solar/consumption-analysis-section";
 import { SolarMonthlySnapshotHistory } from "@/components/solar/monthly-snapshot-history";
 import { useEnergyData } from "@/lib/data";
-import { estimateAmount } from "@/lib/calculations";
+import { estimateAmount as estimatePeriodAmount } from "@/lib/calculations";
 import { monthlyStatistics, type MonthlyStat } from "@/lib/statistics";
 import { heatingSeasonStatistics, seasonalAnnualForecast } from "@/lib/seasonal-forecast";
 import { budapestDate } from "@/lib/growatt/history-ui";
@@ -43,6 +43,11 @@ export default function StatisticsPage() {
 }
 
 function MeterView({ stats, yearly, balance, chartView, setChartView, periods, readings, tariff }: { stats: MonthlyStat[]; yearly: { consumption: number; production: number }; balance: number; chartView: ChartView; setChartView: (value: ChartView) => void; periods: ReturnType<typeof useEnergyData>["periods"]; readings: ReturnType<typeof useEnergyData>["allReadings"]; tariff: ReturnType<typeof useEnergyData>["tariff"] }) {
+  const estimateAmount = (value: number, selectedTariff: typeof tariff) => {
+    const current = [...periods].reverse().find(item => item.status === "open");
+    const currentReadings = current ? readings.filter(reading => reading.settlement_period_id === current.id) : [];
+    return current ? estimatePeriodAmount(value, current.opening_reading_at ?? current.start_date, currentReadings.at(-1)?.reading_at ?? current.start_date, selectedTariff) : 0;
+  };
   return <><div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Időszaki hálózati vételezés" value={formatKwh(yearly.consumption)}/><StatCard label="Időszaki visszatáplálás" value={formatKwh(yearly.production)}/><StatCard label="Energiamérleg" value={formatKwh(balance)}/><StatCard label="Becsült fizetendő összeg" value={formatHuf(estimateAmount(balance, tariff))}/></div><section className="card mt-4 overflow-hidden p-4 sm:p-5"><h2 className="font-black">Havi energia</h2><div className="mt-3"><SegmentedControl value={chartView} onChange={setChartView} label="Havi grafikon nézet" options={chartViews}/></div><div className="mt-3 h-72 min-w-0 w-full">{stats.length ? <ResponsiveContainer width="100%" height="100%"><BarChart data={stats} margin={{ left: -24, right: 0, bottom: 4 }}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="shortLabel" fontSize={10} interval="preserveStartEnd" minTickGap={22}/><YAxis fontSize={10} width={48}/><Tooltip formatter={value => `${Number(value).toFixed(1)} kWh`} labelFormatter={(_, payload) => payload[0]?.payload.label ?? ""}/>{chartView === "combined" && <Legend/>}{(chartView === "combined" || chartView === "consumption") && <Bar dataKey="consumption" name="Fogyasztás" fill="#f97316" radius={[5,5,0,0]}/>} {(chartView === "combined" || chartView === "production") && <Bar dataKey="production" name="Termelés" fill="#168447" radius={[5,5,0,0]}/>} {chartView === "balance" && <Bar dataKey="balance" name="Egyenleg" fill="#2563eb" radius={[5,5,0,0]}/>}</BarChart></ResponsiveContainer> : <div className="grid h-full place-items-center text-sm text-slate-500">A grafikonhoz legalább két mérés szükséges.</div>}</div></section><MeterMonthList months={stats}/><PeriodList periods={periods} readings={readings} tariff={tariff} collapsible/></>;
 }
 

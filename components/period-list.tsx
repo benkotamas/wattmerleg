@@ -1,4 +1,4 @@
-import { estimateAmount, periodSummary } from "@/lib/calculations";
+import { periodSummary } from "@/lib/calculations";
 import { formatDate, formatHuf, formatKwh } from "@/components/format";
 import type { MeterReading, SettlementPeriod, TariffSettings } from "@/lib/types";
 
@@ -11,7 +11,8 @@ export function PeriodList({ periods, readings, tariff, collapsible = false }: {
           <p className="break-words font-black">{formatDate(period.start_date)} – {period.end_date ? formatDate(period.end_date) : "jelenleg"}</p>
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${period.status === "open" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{period.status === "open" ? "Aktuális, nyitott" : "Lezárt"}</span>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4"><Value label="Fogyasztás" value={formatKwh(summary.consumption)}/><Value label="Termelés" value={formatKwh(summary.production)}/><Value label="Energiamérleg" value={formatKwh(summary.balance)}/><Value label="Becsült összeg" value={formatHuf(estimateAmount(summary.balance, tariff))}/></div>
+        <div className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4"><Value label="Fogyasztás" value={formatKwh(summary.consumption)}/><Value label="Termelés" value={formatKwh(summary.production)}/><Value label="Energiamérleg" value={formatKwh(summary.balance)}/><Value label="Becsült összeg" value={formatHuf(summary.estimatedAmount)}/></div>
+        <details className="mt-3 rounded-xl bg-slate-50 p-3 text-sm"><summary className="cursor-pointer font-bold">Díjszámítás részletei</summary><div className="mt-2 grid grid-cols-2 gap-2"><span>Kedvezményes mennyiség és díj</span><b className="text-right">{formatKwh(summary.amountBreakdown.discountedQuantityKwh)} · {formatHuf(summary.amountBreakdown.discountedFeeFt)}</b><span>Piaci mennyiség és díj</span><b className="text-right">{formatKwh(summary.amountBreakdown.marketQuantityKwh)} · {formatHuf(summary.amountBreakdown.marketFeeFt)}</b><span>Alapdíj</span><b className="text-right">{formatHuf(summary.amountBreakdown.baseFeeFt)}</b><span>Teljes becsült összeg</span><b className="text-right">{formatHuf(summary.amountBreakdown.totalFt)}</b></div></details>
       </article>;
     })}
   </div>;

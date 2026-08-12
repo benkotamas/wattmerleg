@@ -8,13 +8,13 @@ import type { TariffSettings } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const tariffColumns = "discounted_limit_kwh,discounted_price_ft,market_price_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day";
+const tariffColumns = "discounted_limit_kwh,discounted_price_ft,market_price_ft,monthly_base_fee_ft,feed_in_price_ft,annual_closing_month,annual_closing_day,heating_season_start_month,heating_season_start_day,heating_season_end_month,heating_season_end_day";
 
 function tariffFromRow(row: Record<string, unknown> | null): TariffSettings | null {
   if (!row) return null;
   const tariff = {
     discounted_limit_kwh: Number(row.discounted_limit_kwh), discounted_price_ft: Number(row.discounted_price_ft),
-    market_price_ft: Number(row.market_price_ft), feed_in_price_ft: Number(row.feed_in_price_ft),
+    market_price_ft: Number(row.market_price_ft), monthly_base_fee_ft: Number(row.monthly_base_fee_ft), feed_in_price_ft: Number(row.feed_in_price_ft),
     annual_closing_month: Number(row.annual_closing_month), annual_closing_day: Number(row.annual_closing_day),
     heating_season_start_month: Number(row.heating_season_start_month), heating_season_start_day: Number(row.heating_season_start_day),
     heating_season_end_month: Number(row.heating_season_end_month), heating_season_end_day: Number(row.heating_season_end_day),

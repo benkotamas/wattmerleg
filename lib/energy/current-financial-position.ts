@@ -1,6 +1,6 @@
-import { estimateAmount } from "@/lib/calculations";
+import { billingAmountBreakdown } from "@/lib/calculations";
 import type { EonPeriodOverview } from "@/lib/eon-import/overview";
-import type { TariffSettings } from "@/lib/types";
+import type { BillingAmountBreakdown, TariffSettings } from "@/lib/types";
 
 export type FinancialConfidence = "high" | "medium" | "low";
 export type FinancialDirection = "payable" | "credit" | "balanced";
@@ -15,6 +15,7 @@ export type CurrentFinancialPosition = {
   gridExportKwh: number;
   netGridKwh: number;
   estimatedAmountFt: number;
+  amountBreakdown: BillingAmountBreakdown;
   financialDirection: FinancialDirection;
   cutoffAt: string;
   stale: boolean;
@@ -75,7 +76,8 @@ export function buildCurrentFinancialPosition(args: {
 
   const netGridKwh = overview.gridImportKwh - overview.gridExportKwh;
   if (!Number.isFinite(netGridKwh)) throw new Error("INVALID_NET_GRID");
-  const estimatedAmountFt = estimateAmount(netGridKwh, tariff);
+  const amountBreakdown = billingAmountBreakdown(netGridKwh, overview.periodStartAt, overview.lastDataAt, tariff);
+  const estimatedAmountFt = amountBreakdown.totalFt;
   if (!Number.isFinite(estimatedAmountFt)) throw new Error("INVALID_ESTIMATED_AMOUNT");
   const warnings = new Set(overview.warnings);
   if (overview.provisionalDays > 0) warnings.add("PROVISIONAL_CURRENT_DAY");
@@ -93,6 +95,7 @@ export function buildCurrentFinancialPosition(args: {
     gridExportKwh: overview.gridExportKwh,
     netGridKwh,
     estimatedAmountFt,
+    amountBreakdown,
     financialDirection: financialDirection(netGridKwh),
     cutoffAt: overview.lastDataAt,
     stale: overview.stale,

@@ -5,7 +5,7 @@ vi.mock("@/lib/eon-import/route-auth", () => ({ eonImportContext: async () => st
 import { GET } from "./route";
 
 const eonOverview = { periodId: "period-1", periodStartAt: "2026-08-04T14:00:00Z", boundaryPrecision: "exact", gridImportKwh: 100, gridExportKwh: 20, netGridKwh: 80, availableIntervals: 96, expectedClosedDayIntervals: 96, missingClosedDayIntervals: 0, closedDayCoveragePercent: 100, completeDays: 1, provisionalDays: 0, incompleteDays: 0, fallDstLimitedDays: 0, lastDataAt: "2026-08-05T12:00:00Z", stale: false, warnings: [], incompleteDates: [], user_id: "must-not-leak" };
-const tariff = { discounted_limit_kwh: 2523, discounted_price_ft: 36, market_price_ft: 70.1, feed_in_price_ft: 5, annual_closing_month: 8, annual_closing_day: 4, heating_season_start_month: 10, heating_season_start_day: 1, heating_season_end_month: 4, heating_season_end_day: 30 };
+const tariff = { discounted_limit_kwh: 2523, discounted_price_ft: 36.208, market_price_ft: 70.104, monthly_base_fee_ft: 153.035, feed_in_price_ft: 5, annual_closing_month: 8, annual_closing_day: 4, heating_season_start_month: 10, heating_season_start_day: 1, heating_season_end_month: 4, heating_season_end_day: 30 };
 
 function query(result: unknown) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};

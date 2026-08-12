@@ -17,6 +17,9 @@ describe("current financial position UI", () => {
     expect(source).toContain("DST_FALLBACK_SOURCE_96");
     expect(source).toContain("Az E.ON az őszi óraátállítás napján 96 intervallumot adott a várt 100 helyett.");
   });
+  it("külön megjeleníti az MVM díjsávokat és az alapdíjat", () => {
+    for (const text of ["Kedvezményes mennyiség", "Kedvezményes díj", "Piaci mennyiség", "Piaci díj", "Alapdíj", "Teljes becsült összeg"]) expect(source).toContain(text);
+  });
   it("a kézi KPI blokk külön forrást és egyértelmű betáplálási címkét kap", () => {
     expect(page).toContain("Kézi mérőállás alapján"); expect(page).toContain("Legutóbbi kézi mérés:"); expect(page).toContain("Hálózatba betáplált – kézi mérő"); expect(page).toContain("<CurrentFinancialPositionCard/>");
   });

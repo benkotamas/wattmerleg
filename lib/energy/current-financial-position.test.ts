@@ -16,7 +16,7 @@ describe("current financial position", () => {
   it("az E.ON import/export nettóját a közös estimateAmount függvénnyel számolja", () => {
     const result = buildCurrentFinancialPosition({ settlementPeriodId: "period-1", overview: overview(), tariff: DEFAULT_TARIFF_SETTINGS, tariffSource: "database" })!;
     expect(result.netGridKwh).toBe(80);
-    expect(result.estimatedAmountFt).toBe(estimateAmount(80, DEFAULT_TARIFF_SETTINGS));
+    expect(result.estimatedAmountFt).toBe(estimateAmount(80, overview().periodStartAt, overview().lastDataAt!, DEFAULT_TARIFF_SETTINGS));
     expect(result.source).toBe("eon_intervals");
     expect(result).not.toHaveProperty("growattProductionKwh");
   });
@@ -65,6 +65,6 @@ describe("current financial position", () => {
   });
   it("érvényes input eredményét a validáció nem változtatja meg", () => {
     const result = buildCurrentFinancialPosition({ settlementPeriodId: "period-1", overview: overview(), tariff: DEFAULT_TARIFF_SETTINGS, tariffSource: "database" });
-    expect(result).toMatchObject({ gridImportKwh: 100, gridExportKwh: 20, netGridKwh: 80, estimatedAmountFt: estimateAmount(80, DEFAULT_TARIFF_SETTINGS) });
+    expect(result).toMatchObject({ gridImportKwh: 100, gridExportKwh: 20, netGridKwh: 80, estimatedAmountFt: estimateAmount(80, overview().periodStartAt, overview().lastDataAt!, DEFAULT_TARIFF_SETTINGS) });
   });
 });

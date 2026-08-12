@@ -36,6 +36,7 @@ export interface PeriodSummary {
   production: number;
   balance: number;
   estimatedAmount: number;
+  amountBreakdown: BillingAmountBreakdown;
   elapsedDays: number;
   dailyConsumption: number;
   dailyProduction: number;
@@ -47,6 +48,7 @@ export interface TariffSettings {
   discounted_limit_kwh: number;
   discounted_price_ft: number;
   market_price_ft: number;
+  monthly_base_fee_ft: number;
   feed_in_price_ft: number;
   annual_closing_month: number;
   annual_closing_day: number;
@@ -54,6 +56,17 @@ export interface TariffSettings {
   heating_season_start_day: number;
   heating_season_end_month: number;
   heating_season_end_day: number;
+}
+
+export interface BillingAmountBreakdown {
+  billingDays: number;
+  discountedQuantityKwh: number;
+  discountedFeeFt: number;
+  marketQuantityKwh: number;
+  marketFeeFt: number;
+  baseFeeFt: number;
+  feedInCreditFt: number;
+  totalFt: number;
 }
 
 export interface AnnualForecast extends PeriodSummary {
