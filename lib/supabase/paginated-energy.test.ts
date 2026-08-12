@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ENERGY_PAGE_SIZE, readAllMeterReadings, readAllSettlementPeriods } from "./paginated-energy";
-import type { MeterReading, SettlementPeriod } from "@/lib/types";
+import { ENERGY_PAGE_SIZE, readAllBillingSnapshots, readAllMeterReadings, readAllSettlementPeriods } from "./paginated-energy";
+import type { MeterReading, SettlementBillSnapshot, SettlementPeriod } from "@/lib/types";
 import { periodSummary } from "@/lib/calculations";
 import { DEFAULT_TARIFF_SETTINGS } from "@/lib/config";
 
@@ -45,6 +45,13 @@ describe("paginated energy reads", () => {
     const result = await readAllSettlementPeriods(loader);
     expect(result.slice(0, 2).map(row => row.id)).toEqual([b.id, a.id]);
     expect(result.filter(row => row.id === first[0].id)).toHaveLength(1);
+  });
+
+  it("a számlapillanatképeket is lapozva és kezdődátum szerint olvassa", async () => {
+    const base = { id: "s-2", billing_start_date: "2025-09-12" } as SettlementBillSnapshot;
+    const source = [{ ...base }, { ...base, id: "s-1" }, { ...base, id: "s-3", billing_start_date: "2026-08-08" }];
+    const result = await readAllBillingSnapshots(async (from, to) => ({ data: source.slice(from, to + 1), error: null }));
+    expect(result.map(row => row.id)).toEqual(["s-1", "s-2", "s-3"]);
   });
 
   it.each([0, 1, 2])("fails closed on database error at page %i", async failingPage => {

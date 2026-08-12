@@ -1,4 +1,4 @@
-import type { MeterReading, SettlementPeriod } from "@/lib/types";
+import type { MeterReading, SettlementBillSnapshot, SettlementPeriod } from "@/lib/types";
 
 export const ENERGY_PAGE_SIZE = 1000;
 
@@ -29,4 +29,9 @@ export async function readAllMeterReadings(loadPage: EnergyPageLoader<MeterReadi
 export async function readAllSettlementPeriods(loadPage: EnergyPageLoader<SettlementPeriod>): Promise<SettlementPeriod[]> {
   const rows = await readAllPages(loadPage);
   return rows.sort((left, right) => left.start_date.localeCompare(right.start_date) || left.id.localeCompare(right.id));
+}
+
+export async function readAllBillingSnapshots(loadPage: EnergyPageLoader<SettlementBillSnapshot>): Promise<SettlementBillSnapshot[]> {
+  const rows = await readAllPages(loadPage);
+  return rows.sort((left, right) => left.billing_start_date.localeCompare(right.billing_start_date) || left.id.localeCompare(right.id));
 }

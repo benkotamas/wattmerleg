@@ -69,6 +69,20 @@ export interface BillingAmountBreakdown {
   totalFt: number;
 }
 
+export interface SettlementBillSnapshot {
+  id: string; user_id: string; settlement_period_id: string;
+  billing_start_date: string; billing_end_date: string;
+  opening_consumption_meter_kwh: number; opening_production_meter_kwh: number;
+  closing_consumption_meter_kwh: number; closing_production_meter_kwh: number;
+  consumption_kwh: number; production_kwh: number; balance_kwh: number; billing_days: number;
+  discounted_quantity_kwh: number; discounted_fee_ft: number; market_quantity_kwh: number; market_fee_ft: number;
+  base_fee_ft: number; feed_in_credit_ft: number; calculated_total_ft: number;
+  discounted_limit_kwh: number; discounted_price_ft: number; market_price_ft: number;
+  monthly_base_fee_ft: number; feed_in_price_ft: number;
+  official_total_ft: number | null; invoice_reference: string | null; calculation_version: string;
+  snapshotted_at: string; official_updated_at: string | null; created_at: string; updated_at: string;
+}
+
 export interface AnnualForecast extends PeriodSummary {
   referenceDate: Date;
   closingDate: Date;
