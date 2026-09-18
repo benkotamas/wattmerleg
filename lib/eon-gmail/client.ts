@@ -53,10 +53,44 @@ export class GmailClient {
       throw error;
     }
 
-    const x = await response.json() as {
-      messages?: { id: string }[];
-      nextPageToken?: string;
-    };
+const raw = await response.text();
+
+console.info("[EON Gmail] list response received", {
+  page: pages + 1,
+  status: response.status,
+  contentType: response.headers.get("content-type"),
+  bodyLength: raw.length,
+});
+
+let x: {
+  messages?: { id: string }[];
+  nextPageToken?: string;
+};
+
+if (!raw.trim()) {
+  x = {};
+} else {
+  try {
+    x = JSON.parse(raw);
+  } catch (error) {
+    console.error("[EON Gmail] invalid list response JSON", {
+      page: pages + 1,
+      status: response.status,
+      contentType: response.headers.get("content-type"),
+      bodyLength: raw.length,
+      error:
+        error instanceof Error
+          ? error.message
+          : "UNKNOWN",
+    });
+
+    throw new EonGmailError(
+      "EON_GMAIL_REQUEST_FAILED",
+      503,
+      true
+    );
+  }
+}
 
     ids.push(...(x.messages ?? []).map(v => v.id));
 
