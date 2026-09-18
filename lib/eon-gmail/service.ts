@@ -7,10 +7,62 @@ export function validateAutomaticPeriod(parsed:EonParseResult,emailInternalDate:
 async function finish(db:Admin,userId:string,messageId:string,token:string,status:FinishStatus,error:string|null,hash:string|null,batch:string|null,internalDate:string|null){const response=await db.rpc("finish_eon_gmail_message",{target_user_id:userId,target_gmail_message_id:messageId,target_claim_token:token,target_status:status,target_error_code:error,target_attachment_sha256:hash,target_import_batch_id:batch,target_internal_date:internalDate});if(response.error||!response.data)throw new EonGmailError("EON_GMAIL_DATABASE_ERROR",503,true);return response.data as FinishStatus}
 async function existingBatch(db:Admin,userId:string,id:string,hash:string){const response=await db.from("eon_import_batches").select("id").eq("user_id",userId).or(`external_message_id.eq.${id},attachment_sha256.eq.${hash}`).limit(1).maybeSingle();if(response.error)throw new EonGmailError("EON_GMAIL_DATABASE_ERROR",503,true);return response.data?.id as string|undefined}
 async function saveState(db:Admin,userId:string,verified:boolean,error:string|null,successful=false){const now=new Date().toISOString(),response=await db.from("eon_gmail_ingestion_state").upsert({user_id:userId,mailbox_verified:verified,last_run_at:now,last_error_code:error,updated_at:now,...(successful?{last_successful_import_at:now}:{})},{onConflict:"user_id"});if(response.error)throw new EonGmailError("EON_GMAIL_DATABASE_ERROR",503,true)}
-async function dueRetryIds(db:Admin,userId:string){const table=db.from("eon_gmail_messages") as unknown as{select?:(fields:string)=>unknown};if(typeof table.select!=="function")return[];let chain=table.select("gmail_message_id") as unknown as{eq:(field:string,value:unknown)=>unknown};chain=chain.eq("user_id",userId) as typeof chain;chain=chain.eq("status","retry") as typeof chain;const response=await(((chain as unknown as{lte:(field:string,value:string)=>unknown}).lte("next_retry_at",new Date().toISOString()) as{order:(field:string,options:unknown)=>unknown}).order("internal_date",{ascending:true}) as{limit:(count:number)=>Promise<{data?:{gmail_message_id:string}[];error?:unknown}>}).limit(5);if(response.error)throw new EonGmailError("EON_GMAIL_DATABASE_ERROR",503,true);return(response.data??[]).map(x=>x.gmail_message_id)}
+async function dueRetryIds(db: Admin, userId: string) {
+  console.info("[EON Gmail] loading retry messages");
+
+  const { data, error } = await db
+    .from("eon_gmail_messages")
+    .select("gmail_message_id")
+    .eq("user_id", userId)
+    .eq("status", "retry")
+    .lte("next_retry_at", new Date().toISOString())
+    .order("internal_date", { ascending: true })
+    .limit(5);
+
+  if (error) {
+    console.error("[EON Gmail] retry query failed", {
+      code: error.code,
+      message: error.message,
+    });
+
+    throw new EonGmailError(
+      "EON_GMAIL_DATABASE_ERROR",
+      503,
+      true
+    );
+  }
+
+  const ids = (data ?? []).map(
+    row => row.gmail_message_id
+  );
+
+  console.info("[EON Gmail] retry messages loaded", {
+    count: ids.length,
+  });
+
+  return ids;
+}
+
 export function classifyProcessingError(raw:unknown):{status:FinishStatus;code:string}{if(raw instanceof EonImportError){if(raw.code==="EON_ALREADY_IMPORTED")return{status:"duplicate",code:raw.code};if(raw.code==="EON_DATABASE_ERROR")return{status:"retry",code:raw.code};return{status:"ignored",code:raw.code}}const e=asGmailError(raw);return{status:e.transient?"retry":e.code==="EON_GMAIL_INVALID_MESSAGE"||e.code==="EON_GMAIL_ATTACHMENT_REJECTED"||e.code==="EON_GMAIL_SENDER_REJECTED"||e.code==="EON_GMAIL_PERIOD_REJECTED"?"ignored":"failed",code:e.code}}
 const listResult=(value:GmailListResult|string[]):GmailListResult=>Array.isArray(value)?{ids:value,truncated:false}:value;
-export async function runEonGmailIngestion(userId:string,deps:Deps={}):Promise<IngestionResult>{const db=deps.db??await defaultAdmin();if(!db)throw new EonGmailError("EON_GMAIL_NOT_CONFIGURED",503);let verified=false;try{const config=gmailConfig(deps.env),gmail=deps.gmail??new GmailClient(),importWorkbook=deps.importWorkbook??importEonWorkbook,result:IngestionResult={examined:0,claimed:0,imported:0,duplicates:0,ignored:0,retrying:0,failed:0,codes:[]},profile=await gmail.profile();if(profile.emailAddress.toLowerCase()!==config.expectedAddress)throw new EonGmailError("EON_GMAIL_FORBIDDEN",403);verified=true;const listed=listResult(await gmail.list(config.query,config.allowedFrom)),due=await dueRetryIds(db,userId),ids=[...new Set([...due,...listed.ids])];result.examined=ids.length;if(listed.truncated)result.codes.push("EON_GMAIL_SCAN_LIMIT_REACHED");
+export async function runEonGmailIngestion(userId:string,deps:Deps={}):Promise<IngestionResult>{const db=deps.db??await defaultAdmin();if(!db)throw new EonGmailError("EON_GMAIL_NOT_CONFIGURED",503);let verified=false;try{const config=gmailConfig(deps.env),gmail=deps.gmail??new GmailClient(),importWorkbook=deps.importWorkbook??importEonWorkbook,result:IngestionResult={examined:0,claimed:0,imported:0,duplicates:0,ignored:0,retrying:0,failed:0,codes:[]},profile=await gmail.profile();if(profile.emailAddress.toLowerCase()!==config.expectedAddress)throw new EonGmailError("EON_GMAIL_FORBIDDEN",403);verified=true;const listed = listResult(
+  await gmail.list(config.query, config.allowedFrom)
+);
+
+console.info("[EON Gmail] Gmail listing complete", {
+  count: listed.ids.length,
+  truncated: listed.truncated,
+});
+
+const due = await dueRetryIds(db, userId);
+
+const ids = [...new Set([...due, ...listed.ids])];
+
+console.info("[EON Gmail] candidates ready", {
+  gmail: listed.ids.length,
+  retry: due.length,
+  total: ids.length,
+});result.examined=ids.length;if(listed.truncated)result.codes.push("EON_GMAIL_SCAN_LIMIT_REACHED");
  for(const id of ids){if(result.claimed>=5)break;const claimResponse=await db.rpc("claim_eon_gmail_message",{target_user_id:userId,target_gmail_message_id:id,target_internal_date:null}),claim=Array.isArray(claimResponse.data)?claimResponse.data[0]:claimResponse.data;if(claimResponse.error)throw new EonGmailError("EON_GMAIL_DATABASE_ERROR",503,true);if(!claim?.claim_token)continue;result.claimed++;let hash:string|null=null,internalDate:string|null=null;
   try{
    const metadata=await gmail.metadata(id);assertMessageSize(metadata.sizeEstimate);internalDate=gmailInternalDate(metadata.internalDate);senderAddress(metadata.payload.headers,config.allowedFrom);
