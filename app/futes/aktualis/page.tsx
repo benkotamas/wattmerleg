@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { HeatingNav } from "@/components/heating-nav";
+import { HeatingRebuildButton } from "@/components/heating-rebuild-button";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,7 @@ export default async function CurrentHeatingSeasonPage() {
       <p className="mt-2 text-sm text-slate-600">Időjárási és alapfogyasztási adatokból számított becslés. Nem külön mérőóra által mért kazánfogyasztás; a részlegesen fedett napokat nem használjuk biztos következtetésként.</p>
       {features.error && <p className="mt-3 text-sm">A fűtési becslések átmenetileg nem tölthetők be.</p>}
       {!analysisIsCurrent && <p className="mt-3 text-sm text-amber-800">A napi fűtési modell még nem dolgozta fel a legfrissebb lezárt napot. A becslések csak sikeres újraszámítás után jelennek meg.</p>}
+      <HeatingRebuildButton/>
       <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Nap</th><th className="p-2">Külső átlag</th><th className="p-2">Becsült fűtés</th><th className="p-2">Megbízhatóság</th></tr></thead><tbody>{days.map(day => {
         const feature=featureMap.get(day.date);
         const usable=analysisIsCurrent && !!feature && day.date!==startDate && day.consumption!==null && !feature.provisional && Number(feature.coverage_percent)>=99 && feature.confidence!=="low" && feature.estimated_heating_kwh!==null;
