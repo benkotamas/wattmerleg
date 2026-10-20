@@ -7,7 +7,7 @@ export const DEFAULT_DAY:Setpoint[]=[
  {time:"22:30",temperature:21.5}
 ];
 export function defaultWeekly():WeeklyProgram {return DAYS.map(()=>DEFAULT_DAY.map(x=>({...x})))}
-const minutes=(time:string)=>{const match=/^([01]\\d|2[0-3]):([0-5]\\d)$/.exec(time);return match?Number(match[1])*60+Number(match[2]):NaN};
+const minutes=(time:string)=>{const match=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);return match?Number(match[1])*60+Number(match[2]):NaN};
 export function validateWeekly(value:unknown):value is WeeklyProgram {
  if(!Array.isArray(value)||value.length!==7)return false;
  return value.every(day=>Array.isArray(day)&&day.length>=1&&day.length<=7&&day.every((p:any,i:number)=>{
