@@ -38,7 +38,6 @@ export default function ThermostatTimelinePage(){
  },[date]);
  useEffect(()=>{void load()},[load]);
  const current=revisions.find(item=>item.effective_from<=date);
- const day=current?.weekly_program[dayOfWeek(date)];
  const update=(index:number,key:"time"|"temperature",value:string)=>{
   setProgram(prev=>prev.map((items,d)=>d!==weekday?items:items.map((p,i)=>i!==index?p:{...p,[key]:key==="temperature"?Number(value):value})));
  };
