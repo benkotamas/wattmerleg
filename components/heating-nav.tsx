@@ -8,6 +8,7 @@ const items=[
   {href:"/futes/aktualis",label:"Aktuális szezon"},
   {href:"/futes/termosztat",label:"Termosztátprogram"},
   {href:"/futes/osszehasonlitas",label:"Napi összehasonlítás"},
+  {href:"/futes/reggeli",label:"Reggeli felfűtés"},
   {href:"/futes/elemzes",label:"Historikus elemzés"},
   {href:"/beallitasok/futes",label:"Rendszerbeállítások"},
 ];
