@@ -50,6 +50,8 @@ export default async function CurrentHeatingSeasonPage() {
   }
   const pv = await db.from("growatt_daily_energy").select("local_date,energy_kwh,quality_status").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
   const features = await db.from("heating_energy_daily_features").select("local_date,estimated_heating_kwh,confidence,data_quality_warnings,coverage_percent,provisional,average_temperature_c").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
+  const model = await db.from("heating_analysis_models").select("model_version,period_end,updated_at").eq("user_id",user.id).order("updated_at",{ascending:false}).limit(1).maybeSingle();
+  const analysisIsCurrent = !model.error && !!model.data && model.data.period_end >= yesterday;
   const featureMap = new Map<string,Feature>((features.data ?? []).map(row => [row.local_date,row]));
   if (failed || pv.error) return <AppShell><HeatingNav/><p className="card p-5">Nem sikerült lekérni a mérési adatokat.</p></AppShell>;
 
@@ -90,9 +92,10 @@ export default async function CurrentHeatingSeasonPage() {
       <h2 className="text-xl font-black">Becsült napi fűtési fogyasztás</h2>
       <p className="mt-2 text-sm text-slate-600">Időjárási és alapfogyasztási adatokból számított becslés. Nem külön mérőóra által mért kazánfogyasztás; a részlegesen fedett napokat nem használjuk biztos következtetésként.</p>
       {features.error && <p className="mt-3 text-sm">A fűtési becslések átmenetileg nem tölthetők be.</p>}
+      {!analysisIsCurrent && <p className="mt-3 text-sm text-amber-800">A napi fűtési modell még nem dolgozta fel a legfrissebb lezárt napot. A becslések csak sikeres újraszámítás után jelennek meg.</p>}
       <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Nap</th><th className="p-2">Külső átlag</th><th className="p-2">Becsült fűtés</th><th className="p-2">Megbízhatóság</th></tr></thead><tbody>{days.map(day => {
         const feature=featureMap.get(day.date);
-        const usable=!!feature && day.date!==startDate && day.consumption!==null && !feature.provisional && Number(feature.coverage_percent)>=99 && feature.confidence!=="low" && feature.estimated_heating_kwh!==null;
+        const usable=analysisIsCurrent && !!feature && day.date!==startDate && day.consumption!==null && !feature.provisional && Number(feature.coverage_percent)>=99 && feature.confidence!=="low" && feature.estimated_heating_kwh!==null;
         return <tr key={day.date} className="border-b border-slate-100"><td className="p-2">{day.date}</td><td className="p-2">{fmt(feature?.average_temperature_c == null ? null : Number(feature.average_temperature_c))} °C</td><td className="p-2">{usable ? fmt(Number(feature!.estimated_heating_kwh)) + " kWh" : "Nincs megbízható becslés"}</td><td className="p-2">{usable ? feature!.confidence==="high" ? "Magas" : "Közepes" : "Alacsony / nem számítható"}</td></tr>;
       })}</tbody></table></div>
       <p className="mt-2 text-xs text-slate-500">A becslések a napi háttérszámítás sikeres lefutása után jelennek meg. A kevés mintán alapuló vagy hiányos napokhoz nem jelenítünk meg félrevezető kWh-értéket.</p>
