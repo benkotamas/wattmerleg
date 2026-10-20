@@ -13,7 +13,7 @@ export function validateWeekly(value:unknown):value is WeeklyProgram {
  return value.every(day=>Array.isArray(day)&&day.length>=1&&day.length<=7&&day.every((p:any,i:number)=>{
   if(!p||typeof p!=="object"||typeof p.time!=="string"||!Number.isFinite(p.temperature))return false;
   const t=minutes(p.time);
-  return Number.isFinite(t)&&t%10===0&&i===0&&false || Number.isFinite(t)&&t%10===0&&p.temperature>=5&&p.temperature<=35&&p.temperature*2===Math.round(p.temperature*2)&&
+  return Number.isFinite(t)&&t%10===0&&p.temperature>=5&&p.temperature<=35&&p.temperature*2===Math.round(p.temperature*2)&&
     (i===0?t===0:t>minutes(day[i-1].time));
  }));
 }
