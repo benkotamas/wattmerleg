@@ -5,7 +5,6 @@ import {createClient} from "@/lib/supabase/server";
 
 export const dynamic="force-dynamic";
 type Reading={local_date:string;interval_start_utc:string;import_kwh:number|string;export_kwh:number|string};
-type Weather={local_date:string;average_temperature_c:number|string|null};
 type HourlyWeather={observed_at:string;temperature_c:number|string};
 type ProgramVersion={effective_from:string;effective_time:string|null;weekly_program:unknown};
 type ManualOverride={start_local:string;end_local:string;target_c:number|string};
@@ -84,7 +83,7 @@ export default async function MorningHeatingPage(){
   {(meterError||hourly.error||history.error||overrides.error)&&<p role="alert" className="mt-4 text-sm text-red-700">Egyes adatok nem tölthetők be, az összehasonlítás hiányos lehet.</p>}
   <section className="card mt-5 p-5">
    <h2 className="text-xl font-black">Reggeli hálózati fogyasztás naponta</h2>
-   <p className="mt-2 text-sm text-slate-600">Csak a teljes, 12 darab negyedórás mérési ponttal rendelkező reggeleket hasonlítjuk össze. A mai nap és a hiányos reggelek kimaradnak az átlagból. A reggeli kültéri átlag az órás adatok 06:00–09:00 közötti értékeiből számolódik.</p>
+   <p className="mt-2 text-sm text-slate-600">Csak a teljes, 12 darab negyedórás mérési ponttal rendelkező reggeleket hasonlítjuk össze. A mai nap és a hiányos reggelek kimaradnak az átlagból. A reggeli kültéri átlag az elérhető órás adatok 06:00–09:00 közötti értékeiből számolódik; hiányos adatnál nem tekinthető teljes reggeli átlagnak.</p>
    <div className="mt-4 space-y-3">{complete.slice(0,30).map(d=><div key={d.date} className="grid grid-cols-[95px_1fr_90px] items-center gap-3 text-sm"><span className="font-semibold">{d.date}</span><div className="h-5 rounded bg-slate-100"><div className="h-5 rounded bg-slate-600" style={{width:(d.grid/max*100)+"%"}}/></div><span className="text-right">{fmt(d.grid)} kWh</span></div>)}
     {complete.length===0&&<p className="text-sm text-slate-600">Még nincs teljes reggeli mérés.</p>}
    </div>
