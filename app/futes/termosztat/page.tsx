@@ -20,8 +20,6 @@ export default function ThermostatTimelinePage(){
  const [loading,setLoading]=useState(true);
  const [saving,setSaving]=useState(false);
  const [message,setMessage]=useState("");
- const [forward,setForward]=useState<string>("");
- const [target,setTarget]=useState<string>("");
  const load=useCallback(async()=>{
   setLoading(true);
   const db=createClient();
