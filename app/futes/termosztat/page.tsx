@@ -109,7 +109,6 @@ export default function ThermostatTimelinePage(){
  const plotted=rows.map(row=>{
   const t=new Date(row.interval_start_utc).getTime();
   const weatherPoint=weather.filter(w=>new Date(w.observed_at).getTime()<=t).at(-1);
-  const time=hhmm(row.interval_start_utc);
   return {at:row.interval_start_utc,gridKwh:Number(row.import_kwh),targetC:effectiveTarget(row.interval_start_utc),outsideC:weatherPoint && t-new Date(weatherPoint.observed_at).getTime()<3600000 ? Number(weatherPoint.temperature_c):null};
  });
  const ordered=[...rows].sort((a,b)=>a.interval_start_utc.localeCompare(b.interval_start_utc));
