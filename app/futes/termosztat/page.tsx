@@ -44,7 +44,7 @@ export default function ThermostatTimelinePage(){
  };
  const save=async()=>{
   setMessage("");
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(effective)||!validateWeekly(program)){setMessage("Hibás program: naponta 1–7 növekvő, 10 perces kapcsolási pont, 00:00 kezdéssel és félfokos hőmérséklettel adható meg.");return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(effective)||!validateWeekly(program)){setMessage("Hibás program: naponta 1–7 növekvő, 10 perces kapcsolási pont, 00:00 kezdéssel és félfokos hőmérséklettel adható meg.");return}
   if(revisions.some(v=>v.effective_from===effective)&&!window.confirm("Ezen a napon már van mentett program. Felülírod?"))return;
   setSaving(true);
   const db=createClient();const {data:{user}}=await db.auth.getUser();
