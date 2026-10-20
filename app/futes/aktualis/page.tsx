@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 type MeterRow = { local_date: string; import_kwh: number | string; export_kwh: number | string };
 type PvRow = { local_date: string; energy_kwh: number | string; quality_status: string };
-type Feature = { local_date:string; estimated_heating_kwh:number | string | null; confidence:string; data_quality_warnings:string[] | null; coverage_percent:number | string | null; provisional:boolean; average_temperature_c:number | string | null };\ntype Day = { date: string; imported: number; exported: number; solar: number | null; consumption: number | null; count: number; quality: string };
+type Feature = { local_date:string; estimated_heating_kwh:number | string | null; confidence:string; data_quality_warnings:string[] | null; coverage_percent:number | string | null; provisional:boolean; average_temperature_c:number | string | null };
+type Day = { date: string; imported: number; exported: number; solar: number | null; consumption: number | null; count: number; quality: string };
 const fmt = (n: number | null) => n === null ? "–" : n.toLocaleString("hu-HU", { maximumFractionDigits: 2 });
 const localToday = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 function addDays(date: string, days: number) { const result = new Date(date + "T12:00:00Z"); result.setUTCDate(result.getUTCDate() + days); return result.toISOString().slice(0, 10); }
