@@ -1,1 +1,12 @@
-{"crons":[{"path":"/api/cron/eon-gmail","schedule":"15 8 * * *"}]}
+{
+  "crons": [
+    {
+      "path": "/api/cron/eon-gmail",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/heating/analysis/rebuild",
+      "schedule": "45 9 * * *"
+    }
+  ]
+}
