@@ -49,8 +49,10 @@ export default async function CurrentHeatingSeasonPage() {
     if (!data || data.length < 1000) break;
   }
   const pv = await db.from("growatt_daily_energy").select("local_date,energy_kwh,quality_status").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
-  const features = await db.from("heating_energy_daily_features").select("local_date,estimated_heating_kwh,confidence,data_quality_warnings,coverage_percent,provisional,average_temperature_c").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
   const model = await db.from("heating_analysis_models").select("model_version,period_end,updated_at").eq("user_id",user.id).order("updated_at",{ascending:false}).limit(1).maybeSingle();
+  const features = model.data?.model_version
+    ? await db.from("heating_energy_daily_features").select("local_date,estimated_heating_kwh,confidence,data_quality_warnings,coverage_percent,provisional,average_temperature_c").eq("user_id",user.id).eq("model_version",model.data.model_version).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date")
+    : { data: [] as Feature[], error: null };
   const analysisIsCurrent = !model.error && !!model.data && model.data.period_end >= yesterday;
   const featureMap = new Map<string,Feature>((features.data ?? []).map(row => [row.local_date,row]));
   if (failed || pv.error) return <AppShell><HeatingNav/><p className="card p-5">Nem sikerült lekérni a mérési adatokat.</p></AppShell>;
