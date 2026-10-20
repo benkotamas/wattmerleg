@@ -1,3 +1,4 @@
+import { cronAuthorized } from "@/lib/eon-gmail/http";
 import {NextResponse} from "next/server";
 import {createClient} from "@/lib/supabase/server";
 import {createAdminClient} from "@/lib/supabase/admin";
@@ -16,3 +17,12 @@ function repository(admin:Admin):HeatingAnalysisRepository{let cachedTimeZone:st
  async saveAnalysis(userId,features,model){const{data,error}=await admin.rpc("save_heating_analysis",{target_user_id:userId,target_model_version:HEATING_MODEL_VERSION,features,model});if(error)throw new Error("ANALYSIS_WRITE_FAILED");return data}
 }}
 export async function POST(){const client=await createClient();if(!client)return NextResponse.json({error:{code:"UNAUTHORIZED"}},{status:401,headers});const{data:{user}}=await client.auth.getUser();if(!user)return NextResponse.json({error:{code:"UNAUTHORIZED"}},{status:401,headers});const admin=createAdminClient();if(!admin)return NextResponse.json({error:{code:"ANALYSIS_NOT_CONFIGURED"}},{status:503,headers});try{const result=await runHeatingAnalysisRebuild({repository:repository(admin),userId:user.id});return NextResponse.json(result,{headers})}catch(error){const code=error instanceof Error?error.message:"HEATING_ANALYSIS_REBUILD_FAILED",status=code==="ANALYSIS_ALREADY_RUNNING"?409:code==="ANALYSIS_RANGE_TOO_LARGE"?413:503;return NextResponse.json({error:{code}},{status,headers})}}
+
+export async function GET(request: Request) {
+  if (!cronAuthorized(request)) return NextResponse.json({error:{code:"UNAUTHORIZED"}},{status:401,headers});
+  const userId = process.env.HEATING_ANALYSIS_USER_ID?.trim() || process.env.EON_ALLOWED_USER_ID?.trim();
+  const admin = createAdminClient();
+  if (!userId || !admin) return NextResponse.json({error:{code:"ANALYSIS_NOT_CONFIGURED"}},{status:503,headers});
+  try { const result = await runHeatingAnalysisRebuild({repository:repository(admin),userId}); return NextResponse.json(result,{headers}); }
+  catch(error) { const code=error instanceof Error?error.message:"HEATING_ANALYSIS_REBUILD_FAILED"; return NextResponse.json({error:{code}},{status:code==="ANALYSIS_ALREADY_RUNNING"?409:503,headers}); }
+}
