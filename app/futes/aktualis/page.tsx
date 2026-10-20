@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 type MeterRow = { local_date: string; import_kwh: number | string; export_kwh: number | string };
 type PvRow = { local_date: string; energy_kwh: number | string; quality_status: string };
-type Day = { date: string; imported: number; exported: number; solar: number | null; consumption: number | null; count: number; quality: string };
+type Feature = { local_date:string; estimated_heating_kwh:number | string | null; confidence:string; data_quality_warnings:string[] | null; coverage_percent:number | string | null; provisional:boolean; average_temperature_c:number | string | null };\ntype Day = { date: string; imported: number; exported: number; solar: number | null; consumption: number | null; count: number; quality: string };
 const fmt = (n: number | null) => n === null ? "–" : n.toLocaleString("hu-HU", { maximumFractionDigits: 2 });
 const localToday = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Budapest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 function addDays(date: string, days: number) { const result = new Date(date + "T12:00:00Z"); result.setUTCDate(result.getUTCDate() + days); return result.toISOString().slice(0, 10); }
@@ -37,6 +37,8 @@ export default async function CurrentHeatingSeasonPage() {
     if (!data || data.length < 1000) break;
   }
   const pv = await db.from("growatt_daily_energy").select("local_date,energy_kwh,quality_status").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
+  const features = await db.from("heating_energy_daily_features").select("local_date,estimated_heating_kwh,confidence,data_quality_warnings,coverage_percent,provisional,average_temperature_c").eq("user_id",user.id).gte("local_date",fromDate).lte("local_date",yesterday).order("local_date");
+  const featureMap = new Map<string,Feature>((features.data ?? []).map(row => [row.local_date,row]));
   if (failed || pv.error) return <AppShell><HeatingNav/><p className="card p-5">Nem sikerült lekérni a mérési adatokat.</p></AppShell>;
 
   const pvByDay = new Map<string,PvRow>((pv.data ?? []).map(row => [row.local_date,row]));
@@ -68,6 +70,17 @@ export default async function CurrentHeatingSeasonPage() {
       <div className="card p-4"><p className="text-xs text-slate-500">Teljes, összehasonlítható napok</p><p className="mt-2 text-2xl font-black">{completeDays.length}</p></div>
       <div className="card p-4"><p className="text-xs text-slate-500">Átlagos teljes házfogyasztás</p><p className="mt-2 text-2xl font-black">{fmt(average)} kWh/nap</p></div>
       <div className="card p-4"><p className="text-xs text-slate-500">Legutolsó mért nap</p><p className="mt-2 text-2xl font-black">{days[0]?.date ?? "–"}</p></div>
+    </section>
+    <section className="card mt-4 p-5">
+      <h2 className="text-xl font-black">Becsült napi fűtési fogyasztás</h2>
+      <p className="mt-2 text-sm text-slate-600">Időjárási és alapfogyasztási adatokból számított becslés. Nem külön mérőóra által mért kazánfogyasztás; a részlegesen fedett napokat nem használjuk biztos következtetésként.</p>
+      {features.error && <p className="mt-3 text-sm">A fűtési becslések átmenetileg nem tölthetők be.</p>}
+      <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Nap</th><th className="p-2">Külső átlag</th><th className="p-2">Becsült fűtés</th><th className="p-2">Megbízhatóság</th></tr></thead><tbody>{days.map(day => {
+        const feature=featureMap.get(day.date);
+        const usable=!!feature && day.date!==startDate && day.consumption!==null && !feature.provisional && Number(feature.coverage_percent)>=99 && feature.confidence!=="low" && feature.estimated_heating_kwh!==null;
+        return <tr key={day.date} className="border-b border-slate-100"><td className="p-2">{day.date}</td><td className="p-2">{fmt(feature?.average_temperature_c == null ? null : Number(feature.average_temperature_c))} °C</td><td className="p-2">{usable ? fmt(Number(feature!.estimated_heating_kwh)) + " kWh" : "Nincs megbízható becslés"}</td><td className="p-2">{usable ? feature!.confidence==="high" ? "Magas" : "Közepes" : "Alacsony / nem számítható"}</td></tr>;
+      })}</tbody></table></div>
+      <p className="mt-2 text-xs text-slate-500">A becslések a napi háttérszámítás sikeres lefutása után jelennek meg. A kevés mintán alapuló vagy hiányos napokhoz nem jelenítünk meg félrevezető kWh-értéket.</p>
     </section>
     <section className="card mt-4 p-5">
       <h2 className="text-xl font-black">Napi villamosenergia-mérleg</h2>
