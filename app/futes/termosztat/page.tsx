@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from "react";
 import {AppShell} from "@/components/app-shell";
 import {HeatingNav} from "@/components/heating-nav";
 import {HeatingQuarterHourChart} from "@/components/heating-quarter-hour-chart";
+import {BoilerFlowHistory} from "@/components/boiler-flow-history";
 import {createClient} from "@/lib/supabase/client";
 import {DAYS,defaultWeekly,validateWeekly,setpointAt,type WeeklyProgram} from "@/lib/heating/thermostat-program";
 
@@ -139,6 +140,7 @@ export default function ThermostatTimelinePage(){
    <p className="mt-2 text-xs text-slate-500">Csak biztosan ismert időpontot adj meg. A kézi célérték a grafikonon az adott időszakban elsőbbséget élvez a heti programmal szemben. A korábbi felülírásokat nem találjuk ki.</p>
    <div className="mt-3 space-y-2">{overrides.length===0?<p className="text-sm text-slate-500">Még nincs mentett kézi felülírás.</p>:overrides.map(o=><div key={o.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-3 text-sm"><span>{o.start_local.slice(0,16).replace("T"," ")} – {o.end_local.slice(0,16).replace("T"," ")} · {Number(o.target_c).toLocaleString("hu-HU")} °C{o.note?" · "+o.note:""}</span><button type="button" onClick={()=>void deleteOverride(o.id)} className="underline">Törlés</button></div>)}</div>
   </section>
+  <BoilerFlowHistory/>
   <section className="card mt-5 p-5">
    <h2 className="text-xl font-black">E.ON 15 perces idővonal</h2>
    <label className="mt-3 block text-sm">Nap<input className="ml-3 rounded border p-2" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
