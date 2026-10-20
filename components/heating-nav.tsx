@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const items=[
   {href:"/futes",label:"Fűtésoptimalizálás"},
   {href:"/futes/aktualis",label:"Aktuális szezon"},
+  {href:"/futes/termosztat",label:"Termosztátprogram"},
   {href:"/futes/elemzes",label:"Historikus elemzés"},
   {href:"/beallitasok/futes",label:"Rendszerbeállítások"},
 ];
