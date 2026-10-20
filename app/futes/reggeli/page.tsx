@@ -32,13 +32,14 @@ export default async function MorningHeatingPage(){
  const hRows=(hourly.data??[]) as HourlyWeather[];
  const revisionRows=(history.data??[]) as ProgramVersion[];
  const overrideRows=(overrides.data??[]) as ManualOverride[];
- const morningTemp=new Map<string,{total:number;count:number}>();
+ const morningTemp=new Map<string,Map<string,number>>();
  for(const w of hRows){
   const t=new Date(w.observed_at);const day=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Budapest",year:"numeric",month:"2-digit",day:"2-digit"}).format(t);const time=hh.format(t);
   if(time<"06:00"||time>="09:00")continue;
   const v=Number(w.temperature_c);if(!Number.isFinite(v))continue;
-  const agg=morningTemp.get(day)??{total:0,count:0};agg.total+=v;agg.count++;morningTemp.set(day,agg);
+  const agg=morningTemp.get(day)??new Map<string,number>();agg.set(time,v);morningTemp.set(day,agg);
  }
+ const morningWeather=(date:string)=>{const points=morningTemp.get(date);if(!points)return "Nincs órás adat";if(points.size<3)return points.size+"/3 óra – részleges";const avg=[...points.values()].reduce((a,b)=>a+b,0)/points.size;return fmt(avg,1)+" °C";};
  const programAt=(date:string)=>revisionRows.filter(r=>r.effective_from<=date).at(-1);
  const morningProgram=(date:string)=>{
   const rev=programAt(date);
@@ -83,11 +84,11 @@ export default async function MorningHeatingPage(){
   {(meterError||hourly.error||history.error||overrides.error)&&<p role="alert" className="mt-4 text-sm text-red-700">Egyes adatok nem tölthetők be, az összehasonlítás hiányos lehet.</p>}
   <section className="card mt-5 p-5">
    <h2 className="text-xl font-black">Reggeli hálózati fogyasztás naponta</h2>
-   <p className="mt-2 text-sm text-slate-600">Csak a teljes, 12 darab negyedórás mérési ponttal rendelkező reggeleket hasonlítjuk össze. A mai nap és a hiányos reggelek kimaradnak az átlagból. A reggeli kültéri átlag az elérhető órás adatok 06:00–09:00 közötti értékeiből számolódik; hiányos adatnál nem tekinthető teljes reggeli átlagnak.</p>
+   <p className="mt-2 text-sm text-slate-600">Csak a teljes, 12 darab negyedórás mérési ponttal rendelkező reggeleket hasonlítjuk össze. A mai nap és a hiányos reggelek kimaradnak az átlagból. A reggeli kültéri átlag csak három külön órás adat meglétekor jelenik meg; hiányos időjárási adatoknál külön figyelmeztetés látható.</p>
    <div className="mt-4 space-y-3">{complete.slice(0,30).map(d=><div key={d.date} className="grid grid-cols-[95px_1fr_90px] items-center gap-3 text-sm"><span className="font-semibold">{d.date}</span><div className="h-5 rounded bg-slate-100"><div className="h-5 rounded bg-slate-600" style={{width:(d.grid/max*100)+"%"}}/></div><span className="text-right">{fmt(d.grid)} kWh</span></div>)}
     {complete.length===0&&<p className="text-sm text-slate-600">Még nincs teljes reggeli mérés.</p>}
    </div>
-   <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[630px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Dátum</th><th className="p-2">06:00–07:30</th><th className="p-2">07:30–09:00</th><th className="p-2">Összesen</th><th className="p-2">Külső reggeli átlag</th><th className="p-2">Termosztátprogram</th><th className="p-2">Adatminőség</th></tr></thead><tbody>{all.map(d=><tr className="border-b border-slate-100" key={d.date}><td className="p-2">{d.date}</td><td className="p-2">{fmt(d.before)} kWh</td><td className="p-2">{fmt(d.after)} kWh</td><td className="p-2 font-semibold">{fmt(d.grid)} kWh</td><td className="p-2">{morningTemp.has(d.date)?fmt(morningTemp.get(d.date)!.total/morningTemp.get(d.date)!.count,1)+" °C":"–"}</td><td className="p-2">{morningProgram(d.date)}</td><td className="p-2">{d.morning.size===12?"Teljes reggel":d.morning.size+"/12 mérés (részleges)"}</td></tr>)}</tbody></table></div>
+   <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[630px] text-left text-sm"><thead><tr className="border-b"><th className="p-2">Dátum</th><th className="p-2">06:00–07:30</th><th className="p-2">07:30–09:00</th><th className="p-2">Összesen</th><th className="p-2">Külső reggeli átlag</th><th className="p-2">Termosztátprogram</th><th className="p-2">Adatminőség</th></tr></thead><tbody>{all.map(d=><tr className="border-b border-slate-100" key={d.date}><td className="p-2">{d.date}</td><td className="p-2">{fmt(d.before)} kWh</td><td className="p-2">{fmt(d.after)} kWh</td><td className="p-2 font-semibold">{fmt(d.grid)} kWh</td><td className="p-2">{morningWeather(d.date)}</td><td className="p-2">{morningProgram(d.date)}</td><td className="p-2">{d.morning.size===12?"Teljes reggel":d.morning.size+"/12 mérés (részleges)"}</td></tr>)}</tbody></table></div>
   </section>
   <section className="card mt-4 p-5"><h2 className="text-xl font-black">Hogyan használjuk az eredményeket?</h2><p className="mt-2 text-sm text-slate-600">A reggeli fogyasztási csúcsok időben összevethetők a 06:00-s termosztátcél-emeléssel, de a teljes E.ON-vételezésből nem választható le biztosan a kazán. A Growatt-termelésből rendelkezésre álló napi összesítés nem elegendő a reggeli, negyedórás önfogyasztás felosztásához. Az eltérő programokat és az átállítási napokat jelöljük; ettől még az okozati hatás nem bizonyított.</p></section>
  </AppShell>;
