@@ -3,8 +3,8 @@ export type WeeklyProgram=Setpoint[][];
 export const DAYS=["Hétfő","Kedd","Szerda","Csütörtök","Péntek","Szombat","Vasárnap"];
 export const DEFAULT_DAY:Setpoint[]=[
  {time:"00:00",temperature:21},{time:"06:00",temperature:21.5},
- {time:"08:00",temperature:20.5},{time:"16:00",temperature:21.5},
- {time:"22:30",temperature:21.5}
+ {time:"08:00",temperature:21},{time:"16:00",temperature:21},
+ {time:"22:00",temperature:21.5}
 ];
 export function defaultWeekly():WeeklyProgram {return DAYS.map(()=>DEFAULT_DAY.map(x=>({...x})))}
 const minutes=(time:string)=>{const match=/^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);return match?Number(match[1])*60+Number(match[2]):NaN};
